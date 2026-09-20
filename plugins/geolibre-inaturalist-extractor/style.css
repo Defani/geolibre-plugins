@@ -1,0 +1,364 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later
+   Copyright (c) 2026 Defani Arman (Alfitriansyah) - see README.md */
+
+/* Scoped to .geolibre-inat-* so this doesn't leak into the rest of the app.
+   Uses GeoLibre's own design tokens (hsl(var(--foreground)) etc.) so the
+   control and panel follow the host's light/dark theme automatically. */
+
+.geolibre-inat-control button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+}
+
+.geolibre-inat-control button:hover {
+  background: hsl(var(--muted));
+}
+
+/* ---------- Panel ---------- */
+
+.geolibre-inat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  font-size: 13px;
+  color: hsl(var(--foreground));
+}
+
+.geolibre-inat-warning {
+  padding: 8px 10px;
+  border: 1px solid hsl(var(--border));
+  border-left: 3px solid #e0a800;
+  border-radius: 6px;
+  background: hsl(var(--muted));
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.geolibre-inat-warning a {
+  color: hsl(var(--primary, 210 90% 50%));
+  text-decoration: underline;
+}
+
+.geolibre-inat-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.geolibre-inat-section-title {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.65;
+}
+
+.geolibre-inat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.geolibre-inat-checkbox-row {
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+.geolibre-inat-checkbox-row input {
+  margin: 0;
+}
+
+.geolibre-inat-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.geolibre-inat-radio-row {
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+.geolibre-inat-radio-row input {
+  margin: 0;
+}
+
+.geolibre-inat-row-label {
+  font-weight: 500;
+}
+
+.geolibre-inat-select,
+.geolibre-inat-text-input,
+.geolibre-inat-date-input {
+  padding: 4px 6px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.geolibre-inat-select {
+  width: 100%;
+}
+
+.geolibre-inat-text-input {
+  flex: 1;
+}
+
+.geolibre-inat-date-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.geolibre-inat-number-input {
+  width: 90px;
+  padding: 4px 6px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.geolibre-inat-taxa-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+  transition: opacity 0.15s ease;
+}
+
+.geolibre-inat-taxa-grid.is-disabled {
+  opacity: 0.4;
+}
+
+.geolibre-inat-taxa-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.geolibre-inat-taxa-item input {
+  margin: 0;
+}
+
+.geolibre-inat-hint {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+/* Two dropdowns side by side (annotation term + value) */
+.geolibre-inat-row .geolibre-inat-select {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ---------- Advanced filters (collapsible <details>) ---------- */
+
+.geolibre-inat-advanced {
+  padding-top: 8px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.geolibre-inat-advanced-summary {
+  margin-top: 0;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.geolibre-inat-advanced-summary::-webkit-details-marker {
+  display: none;
+}
+
+.geolibre-inat-advanced-summary::before {
+  content: "\25B8";
+  display: inline-block;
+  width: 1.1em;
+}
+
+.geolibre-inat-advanced[open] > .geolibre-inat-advanced-summary::before {
+  content: "\25BE";
+}
+
+.geolibre-inat-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.geolibre-inat-field-label {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.geolibre-inat-primary-button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #16a34a;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.geolibre-inat-primary-button:hover {
+  background: #128a3e;
+}
+
+.geolibre-inat-primary-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.geolibre-inat-status {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.geolibre-inat-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 6px;
+  background: hsl(var(--muted));
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.geolibre-inat-credit {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid hsl(var(--border));
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+/* ---------- Map-anchored popup ---------- */
+
+.geolibre-inat-popup {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, calc(-100% - 14px));
+  width: 220px;
+  max-width: 70vw;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: auto;
+}
+
+.geolibre-inat-popup::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+  background: hsl(var(--background));
+  border-right: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.geolibre-inat-popup-close {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.geolibre-inat-popup-photos {
+  display: flex;
+  gap: 2px;
+  overflow: hidden;
+  border-radius: 8px 8px 0 0;
+}
+
+.geolibre-inat-popup-thumb {
+  height: 100px;
+  object-fit: cover;
+  flex: 1 1 0;
+  cursor: zoom-in;
+}
+
+.geolibre-inat-popup-thumb.is-main {
+  flex: 2 1 0;
+}
+
+.geolibre-inat-popup-attribution {
+  padding: 3px 10px 0;
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+.geolibre-inat-popup-body {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.geolibre-inat-popup-title {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.geolibre-inat-popup-scientific {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.geolibre-inat-popup-row {
+  display: flex;
+  gap: 4px;
+}
+
+.geolibre-inat-popup-label {
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.geolibre-inat-popup-desc {
+  margin: 4px 0 0;
+  opacity: 0.85;
+}
+
+.geolibre-inat-popup-link {
+  margin-top: 4px;
+  color: #16a34a;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.geolibre-inat-popup-link:hover {
+  text-decoration: underline;
+}
