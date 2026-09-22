@@ -9,9 +9,7 @@
       "author": "GeoLibre",
       "homepage": "https://github.com/opengeos/geolibre-plugins",
       "manifestUrl": "plugins/sample/plugin.json",
-      "categories": [
-        "Example"
-      ],
+      "categories": ["Example"],
       "minGeoLibreVersion": "0.9.0"
     },
     {
@@ -22,10 +20,7 @@
       "author": "Joao Pereira",
       "homepage": "https://github.com/JPPereira93/geolibre-copernicus-ems",
       "manifestUrl": "plugins/copernicus-ems/plugin.json",
-      "categories": [
-        "Data",
-        "Imagery"
-      ],
+      "categories": ["Data", "Imagery"],
       "minGeoLibreVersion": "2.7.0"
     },
     {
@@ -36,11 +31,7 @@
       "author": "Husayn El Sharif",
       "homepage": "https://github.com/helsharif/geolibre-netcdf-loader-plugin",
       "manifestUrl": "plugins/geolibre-netcdf/plugin.json",
-      "categories": [
-        "Climate",
-        "Raster",
-        "Data"
-      ],
+      "categories": ["Climate", "Raster", "Data"],
       "minGeoLibreVersion": "1.9.0"
     },
     {
@@ -51,10 +42,7 @@
       "author": "Qiusheng Wu",
       "homepage": "https://github.com/opengeos/geolibre-nasa-opera",
       "manifestUrl": "plugins/geolibre-nasa-opera/plugin.json",
-      "categories": [
-        "Data",
-        "Imagery"
-      ],
+      "categories": ["Data", "Imagery"],
       "minGeoLibreVersion": "0.9.0"
     },
     {
@@ -65,10 +53,7 @@
       "author": "Qiusheng Wu",
       "homepage": "https://github.com/opengeos/geolibre-d2s",
       "manifestUrl": "plugins/geolibre-d2s/plugin.json",
-      "categories": [
-        "Data",
-        "Imagery"
-      ],
+      "categories": ["Data", "Imagery"],
       "minGeoLibreVersion": "0.9.0"
     },
     {
@@ -79,10 +64,7 @@
       "author": "Qiusheng Wu",
       "homepage": "https://github.com/opengeos/geolibre-hypercoast",
       "manifestUrl": "plugins/geolibre-hypercoast/plugin.json",
-      "categories": [
-        "Data",
-        "Imagery"
-      ],
+      "categories": ["Data", "Imagery"],
       "minGeoLibreVersion": "0.9.0"
     },
     {
@@ -93,9 +75,7 @@
       "author": "Kai Erlenbusch",
       "homepage": "https://github.com/kai-erlenbusch/geolibre-plugin-flowmaps",
       "manifestUrl": "plugins/geolibre-plugin-flowmaps/plugin.json",
-      "categories": [
-        "Visualization"
-      ],
+      "categories": ["Visualization"],
       "minGeoLibreVersion": "0.9.0"
     },
     {
@@ -106,11 +86,7 @@
       "author": "DHIS2 for Climate & Health",
       "homepage": "https://github.com/dhis2/open-climate-service-geolibre-plugin",
       "manifestUrl": "plugins/open-climate-service/plugin.json",
-      "categories": [
-        "Climate",
-        "Raster",
-        "Data"
-      ],
+      "categories": ["Climate", "Raster", "Data"],
       "minGeoLibreVersion": "2.4.0"
     },
     {
@@ -121,11 +97,7 @@
       "author": "Mohsen Tahmasebi Nasab",
       "homepage": "https://github.com/mohsennasab/aorc-to-dss",
       "manifestUrl": "plugins/aorctodss/plugin.json",
-      "categories": [
-        "Climate",
-        "Raster",
-        "Data"
-      ],
+      "categories": ["Climate", "Raster", "Data"],
       "minGeoLibreVersion": "2.4.0"
     },
     {
@@ -136,10 +108,7 @@
       "author": "chuofringer (flood.live)",
       "homepage": "https://github.com/chuofringer/geolibre-flood-gauges",
       "manifestUrl": "plugins/geolibre-flood-gauges/plugin.json",
-      "categories": [
-        "Hydrology",
-        "Data"
-      ],
+      "categories": ["Hydrology", "Data"],
       "minGeoLibreVersion": "2.0.0"
     },
     {
@@ -150,9 +119,7 @@
       "author": "wangzcl@WEN-Research-Group",
       "homepage": "https://github.com/WEN-Research-Group/StreamSnap",
       "manifestUrl": "plugins/streamsnap/plugin.json",
-      "categories": [
-        "Hydrology"
-      ],
+      "categories": ["Hydrology"],
       "minGeoLibreVersion": "2.9.0"
     },
     {
@@ -163,10 +130,7 @@
       "author": "Cedric Bouffard",
       "homepage": "https://github.com/cedricbouffard/geolibre-contour",
       "manifestUrl": "plugins/geolibre-contour/plugin.json",
-      "categories": [
-        "Raster",
-        "Visualization"
-      ],
+      "categories": ["Raster", "Visualization"],
       "minGeoLibreVersion": "0.9.0"
     },
     {
@@ -177,11 +141,7 @@
       "author": "Enzo Cocca",
       "homepage": "https://github.com/enzococca/geolibre-movecost",
       "manifestUrl": "plugins/movecost/plugin.json",
-      "categories": [
-        "Analysis",
-        "Archaeology",
-        "Terrain"
-      ],
+      "categories": ["Analysis", "Archaeology", "Terrain"],
       "minGeoLibreVersion": "2.9.0"
     },
     {
@@ -192,9 +152,7 @@
       "author": "Defani Arman (Alfitriansyah)",
       "homepage": "https://github.com/Defani/Geolibre-Inaturalist-Extraction-Plugins",
       "manifestUrl": "plugins/geolibre-inaturalist-extractor/plugin.json",
-      "categories": [
-        "Data"
-      ],
+      "categories": ["Data"],
       "minGeoLibreVersion": "3.0.0"
     }
   ]
