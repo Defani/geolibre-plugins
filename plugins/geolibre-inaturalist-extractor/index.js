@@ -2020,7 +2020,7 @@ function registerSurfaces(app) {
 export const plugin = {
   id: PLUGIN_ID,
   name: "iNaturalist Extractor",
-  version: "1.4.0",
+  version: "1.5.0",
   engines: ["maplibre"],
 
   activate(app) {
