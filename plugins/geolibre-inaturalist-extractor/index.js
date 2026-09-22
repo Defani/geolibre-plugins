@@ -53,13 +53,12 @@ const PANEL_ID = `${PLUGIN_ID}-panel`;
 const MARKER_PROP = "__inatPlugin";
 
 const API_BASE = "https://api.inaturalist.org/v1/observations";
-const RECOMMENDED_PRACTICES_URL =
-  "https://www.inaturalist.org/pages/api+recommended+practices";
 
 const PER_PAGE_LIMIT = 200; // iNaturalist's own per-page ceiling
 const DEFAULT_MAX_OBS = 200;
 const MAX_ALLOWED_OBS = 2000; // keep the plugin polite to the public API
 const PAGE_DELAY_MS = 250; // small gap between paged requests
+const REQUEST_TIMEOUT_MS = 30000; // give up on a request that never answers
 
 // The 14 top-level "iconic taxa" iNaturalist groups everything under.
 // Order roughly follows the one used on the iNaturalist website's own filter.
@@ -183,19 +182,51 @@ const ANNOTATION_TERMS = [
   },
 ];
 
-// Small green/slate "search + paw" glyph used for the panel's rail icon,
-// where an <img> is used and `currentColor` cannot follow the app theme.
+// Icons: Google's Material Symbols (Outlined, weight 400), Apache-2.0.
+// The SVG paths are inlined instead of loading the Material Symbols web font,
+// so the plugin needs no extra network request and no stylesheet from a CDN,
+// and the icons follow the theme through `currentColor`.
+const MATERIAL_ICONS = {
+  raven:
+    "m324-83-55-23 60-145q-110-24-179.5-111.5T80-562.24V-727q0-64 45.24-108.5T234-880q17.39 0 33.19 4Q283-872 299-865l234 97-146 54v76l453 288 40 190h-80l-38-84H552v164h-60v-164H391L324-83Zm74-221h402l-101-64H397.6q-68.6 0-119.1-46T228-528h60q0 43 32.31 71.5Q352.63-428 398-428h207L327-605v-122q0-38.36-27.45-65.68-27.45-27.32-66-27.32t-66.05 27Q140-766 140-727v165q0 107.5 75.25 182.75T398-304ZM212.68-705.68q-8.68-8.67-8.68-21.5 0-12.82 8.68-20.82 8.67-8 21.5-8 12.82 0 20.82 8t8 20.82q0 12.83-8 21.5-8 8.68-20.82 8.68-12.83 0-21.5-8.68ZM398-368Z",
+  map:
+    "m612-120-263-93-179 71q-17 9-33.5-1T120-173v-558q0-13 7.5-23t19.5-15l202-71 263 92 178-71q17-8 33.5 1.5T840-788v565q0 11-7.5 19T814-192l-202 72Zm-34-75v-505l-196-66v505l196 66Zm60 0 142-47v-512l-142 54v505Zm-458-12 142-54v-505l-142 47v512Zm458-493v505-505Zm-316-66v505-505Z",
+  verified:
+    "m346-60-76-130-151-31 17-147-96-112 96-111-17-147 151-31 76-131 134 62 134-62 77 131 150 31-17 147 96 111-96 112 17 147-150 31-77 130-134-62-134 62Zm27-79 107-45 110 45 67-100 117-30-12-119 81-92-81-94 12-119-117-28-69-100-108 45-110-45-67 100-117 28 12 119-81 94 81 92-12 121 117 28 70 100Zm107-341Zm-43 133 227-225-45-41-182 180-95-99-46 45 141 140Z",
+  calendar_month:
+    "M180-80q-24 0-42-18t-18-42v-620q0-24 18-42t42-18h65v-60h65v60h340v-60h65v60h65q24 0 42 18t18 42v620q0 24-18 42t-42 18H180Zm0-60h600v-430H180v430Zm0-490h600v-130H180v130Zm0 0v-130 130Zm300 230q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-188.5-11.5Q280-423 280-440t11.5-28.5Q303-480 320-480t28.5 11.5Q360-457 360-440t-11.5 28.5Q337-400 320-400t-28.5-11.5ZM640-400q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-188.5-11.5Q280-263 280-280t11.5-28.5Q303-320 320-320t28.5 11.5Q360-297 360-280t-11.5 28.5Q337-240 320-240t-28.5-11.5ZM640-240q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z",
+  eco:
+    "M213-175q-43.59-45-68.3-104Q120-338 120-400q0-73 25.5-133.5T222-645q35-35 87-59t122.5-37.5Q502-755 591-758.5t198 3.5q8 108 5.5 197.5t-16 160.75q-13.5 71.25-38 124.56Q716-218.87 680-183q-51 51-110 77T444-80q-69 0-126.5-23.5T213-175Zm103 0q25 17 58 26t69.92 9Q497-140 547-162t91-64q27-27 46-70.5t31-103Q727-459 731-534t0-165q-94-2-168.5 2.5T431-680q-57 12-98 30.5T266-604q-42 43-64 91t-22 98q0 48 20.5 100.5T251-230q53-98 127-176t157-123q-87 75-141 162.5T316-175Zm0 0Zm0 0Z",
+  person_search:
+    "M440.5-500Q378-500 334-544.06 290-588.13 290-650q0-63 44.06-106.5Q378.13-800 440-800q63 0 106.5 43.5t43.5 106q0 62.5-43.5 106.5t-106 44Zm-.5-60q38 0 64-26.44T530-650q0-38-26-64t-63.5-26q-37.5 0-64 26T350-650.5q0 37.5 26.44 64T440-560ZM898-20 758-160q-23 17-47.5 23.5t-50.07 6.5q-71.01 0-120.72-49.62Q490-229.24 490-300.12t49.62-120.38q49.62-49.5 120.5-49.5t120.38 49.71Q830-370.58 830-299.57q0 25.57-6.5 50.07T800-202L940-62l-42 42ZM738.5-221.5Q770-253 770-300t-31.5-78.5Q707-410 660-410t-78.5 31.5Q550-347 550-300t31.5 78.5Q613-190 660-190t78.5-31.5ZM120-160v-94q0-37 17.5-63t50.5-43q47-23 122.5-43.5T464-419q-8 13-15 28.5T438-360q-78-1-136 18.5T212-306q-14 8-23 21.5t-9 30.5v34h258q11 17 20 31.5t20 28.5H120Zm320-490Zm-2 430Z",
+  tune:
+    "M427-120v-225h60v83h353v60H487v82h-60Zm-307-82v-60h247v60H120Zm187-166v-82H120v-60h187v-84h60v226h-60Zm120-82v-60h413v60H427Zm166-165v-225h60v82h187v60H653v83h-60Zm-473-83v-60h413v60H120Z",
+  list_alt:
+    "M321-295q9-9 9-21t-9-21q-9-9-21-9t-21 9q-9 9-9 21t9 21q9 9 21 9t21-9Zm0-164q9-9 9-21t-9-21q-9-9-21-9t-21 9q-9 9-9 21t9 21q9 9 21 9t21-9Zm0-164q9-9 9-21t-9-21q-9-9-21-9t-21 9q-9 9-9 21t9 21q9 9 21 9t21-9Zm111 337h244v-60H432v60Zm0-164h244v-60H432v60Zm0-164h244v-60H432v60ZM180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm0-600v600-600Z",
+};
+
+function createMaterialIcon(name, size = 16) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 -960 960 960");
+  svg.setAttribute("width", String(size));
+  svg.setAttribute("height", String(size));
+  svg.setAttribute("fill", "currentColor");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", MATERIAL_ICONS[name]);
+  svg.appendChild(path);
+  return svg;
+}
+
+// Panel rail icon. It is used as an <img>, where `currentColor` cannot follow
+// the app theme, so it gets one mid-tone green that stays readable on both
+// the light and the dark rail.
 const RAIL_ICON_DATA_URI =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
-      '<circle cx="10" cy="10" r="6" fill="none" stroke="#64748b" stroke-width="2"/>' +
-      '<line x1="14.5" y1="14.5" x2="20" y2="20" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>' +
-      '<ellipse cx="10" cy="12" rx="2.6" ry="2.1" fill="#16a34a"/>' +
-      '<circle cx="6.8" cy="8.3" r="1.15" fill="#16a34a"/>' +
-      '<circle cx="8.8" cy="6.3" r="1.15" fill="#16a34a"/>' +
-      '<circle cx="11.2" cy="6.3" r="1.15" fill="#16a34a"/>' +
-      '<circle cx="13.2" cy="8.3" r="1.15" fill="#16a34a"/>' +
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 -960 960 960">' +
+      '<path fill="#16a34a" d="' + MATERIAL_ICONS.raven + '"/>' +
       "</svg>",
   );
 
@@ -212,7 +243,6 @@ const state = {
   popup: null,
   fetching: false,
   abortController: null,
-  layerCount: 0,
 };
 
 // ############################################################################
@@ -236,6 +266,21 @@ function formatDate(value) {
     month: "short",
     day: "numeric",
   });
+}
+
+// Split "max observations" into equal pages of at most PER_PAGE_LIMIT. The page
+// size stays constant across requests, which keeps iNaturalist's page offsets
+// aligned; the collected list is trimmed to exactly maxObs afterwards, so at
+// most (pages - 1) extra observations are ever fetched.
+function planPaging(maxObs) {
+  const totalPages = Math.max(1, Math.ceil(maxObs / PER_PAGE_LIMIT));
+  const perPage = Math.ceil(maxObs / totalPages);
+  return { perPage, totalPages };
+}
+
+// Only http(s) URLs are ever used for photos, whatever the API returns.
+function httpUrl(value) {
+  return typeof value === "string" && /^https?:\/\//i.test(value) ? value : null;
 }
 
 function formatCount(n) {
@@ -334,60 +379,11 @@ function describeAnnotation(termId, valueId) {
 // ########## Toolbar icon (vector, not text) ################################
 // ############################################################################
 
-// A magnifying glass with a paw print inside it: "search/extract wildlife
-// observations". Built from plain SVG primitives (circle/line/ellipse), fully
-// vector and themeable with currentColor - i.e. a real icon, not a text
-// label standing in for one.
+// A raven (Material Symbols): a wildlife glyph that stays legible at 20 px.
+// Its colour is set in style.css (dark on the control's white background, like
+// GeoLibre's other map buttons) rather than inherited from the app theme.
 function createToolbarIcon() {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("width", "18");
-  svg.setAttribute("height", "18");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("aria-hidden", "true");
-
-  const glass = document.createElementNS(SVG_NS, "circle");
-  glass.setAttribute("cx", "10");
-  glass.setAttribute("cy", "10");
-  glass.setAttribute("r", "6");
-  glass.setAttribute("stroke", "currentColor");
-  glass.setAttribute("stroke-width", "2");
-  svg.appendChild(glass);
-
-  const handle = document.createElementNS(SVG_NS, "line");
-  handle.setAttribute("x1", "14.5");
-  handle.setAttribute("y1", "14.5");
-  handle.setAttribute("x2", "20");
-  handle.setAttribute("y2", "20");
-  handle.setAttribute("stroke", "currentColor");
-  handle.setAttribute("stroke-width", "2");
-  handle.setAttribute("stroke-linecap", "round");
-  svg.appendChild(handle);
-
-  const pad = document.createElementNS(SVG_NS, "ellipse");
-  pad.setAttribute("cx", "10");
-  pad.setAttribute("cy", "12");
-  pad.setAttribute("rx", "2.6");
-  pad.setAttribute("ry", "2.1");
-  pad.setAttribute("fill", "currentColor");
-  svg.appendChild(pad);
-
-  const toes = [
-    [6.8, 8.3],
-    [8.8, 6.3],
-    [11.2, 6.3],
-    [13.2, 8.3],
-  ];
-  for (const [cx, cy] of toes) {
-    const toe = document.createElementNS(SVG_NS, "circle");
-    toe.setAttribute("cx", String(cx));
-    toe.setAttribute("cy", String(cy));
-    toe.setAttribute("r", "1.15");
-    toe.setAttribute("fill", "currentColor");
-    svg.appendChild(toe);
-  }
-
-  return svg;
+  return createMaterialIcon("raven", 20);
 }
 
 // ############################################################################
@@ -426,28 +422,91 @@ const control = {
 // ########## Panel UI ########################################################
 // ############################################################################
 
+// Which coloured dot an iconic taxon's chip gets in the accordion and the
+// active-filter chip row - purely cosmetic grouping, not sent to the API.
+const TAXON_GROUP = {
+  Plantae: "plant",
+  Fungi: "fungi",
+  Chromista: "protist",
+  Protozoa: "protist",
+  Aves: "vert",
+  Mammalia: "vert",
+  Reptilia: "vert",
+  Amphibia: "vert",
+  Actinopterygii: "vert",
+  Animalia: "vert",
+  Insecta: "invert",
+  Arachnida: "invert",
+  Mollusca: "invert",
+  Unknown: "unknown",
+};
+
 function renderPanel(container) {
   const root = el("div", "geolibre-inat-panel");
 
-  const warning = el("div", "geolibre-inat-warning");
-  warning.appendChild(
-    document.createTextNode(
-      "For small-to-medium batches, not bulk scraping - see the ",
-    ),
-  );
-  const link = document.createElement("a");
-  link.href = RECOMMENDED_PRACTICES_URL;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.textContent = "API recommended practices";
-  warning.appendChild(link);
-  warning.appendChild(document.createTextNode("."));
-  root.appendChild(warning);
+  // ---- Header: title + reset -------------------------------------------
+  const head = el("div", "geolibre-inat-head");
+  head.appendChild(el("h2", "geolibre-inat-heading", "iNaturalist Extractor"));
+  const resetButton = el("button", "geolibre-inat-reset-btn", "Reset filters");
+  resetButton.type = "button";
+  head.appendChild(resetButton);
+  root.appendChild(head);
 
-  const form = el("div", "geolibre-inat-form");
+  // ---- Accordion body -----------------------------------------------------
+  const body = el("div", "geolibre-inat-body");
+  root.appendChild(body);
 
-  // ---- Area: current view vs. active layer extent -------------------------
-  form.appendChild(el("div", "geolibre-inat-section-title", "Area"));
+  let openSectionId = "species";
+  const sections = new Map();
+
+  function setSectionOpen(id) {
+    openSectionId = openSectionId === id ? null : id;
+    for (const [sid, s] of sections) {
+      const isOpen = sid === openSectionId;
+      s.sectionEl.dataset.open = String(isOpen);
+      s.btn.setAttribute("aria-expanded", String(isOpen));
+      s.panelEl.hidden = !isOpen;
+    }
+  }
+
+  function addSection(id, iconName, label) {
+    const sectionEl = el("div", "geolibre-inat-sec");
+    sectionEl.dataset.id = id;
+    sectionEl.dataset.open = String(id === openSectionId);
+
+    const btn = el("button", "geolibre-inat-sec-btn");
+    btn.type = "button";
+    btn.setAttribute("aria-expanded", String(id === openSectionId));
+    btn.appendChild(createMaterialIcon(iconName, 16));
+    btn.appendChild(el("span", "geolibre-inat-sec-label", label));
+    const valueEl = el("span", "geolibre-inat-sec-value");
+    btn.appendChild(valueEl);
+    btn.appendChild(el("span", "geolibre-inat-sec-chev"));
+    btn.addEventListener("click", () => setSectionOpen(id));
+    sectionEl.appendChild(btn);
+
+    const panelEl = el("div", "geolibre-inat-sec-panel");
+    panelEl.hidden = id !== openSectionId;
+    sectionEl.appendChild(panelEl);
+
+    body.appendChild(sectionEl);
+    sections.set(id, { sectionEl, btn, valueEl, panelEl });
+    return panelEl;
+  }
+
+  // A "label above control" field, matching the redesign's stacked layout.
+  function fieldStack(labelText, controlEl, helpText) {
+    const wrap = el("label", "geolibre-inat-field");
+    wrap.appendChild(el("span", null, labelText));
+    wrap.appendChild(controlEl);
+    if (helpText) wrap.appendChild(el("p", "geolibre-inat-help", helpText));
+    return wrap;
+  }
+
+  // ============================================================
+  // Area
+  // ============================================================
+  const areaPanel = addSection("area", "map", "Area");
 
   const areaRadioGroup = el("div", "geolibre-inat-radio-group");
   const areaViewRow = el("label", "geolibre-inat-row geolibre-inat-radio-row");
@@ -466,22 +525,20 @@ function renderPanel(container) {
   areaLayerRadio.name = `${PLUGIN_ID}-area`;
   areaLayerRadio.value = "layer";
   areaLayerRow.appendChild(areaLayerRadio);
-  areaLayerRow.appendChild(el("span", null, "Active layer extent"));
+  areaLayerRow.appendChild(el("span", null, "Extent of a layer"));
   areaRadioGroup.appendChild(areaLayerRow);
-  form.appendChild(areaRadioGroup);
+  areaPanel.appendChild(areaRadioGroup);
 
   const layerSelect = document.createElement("select");
   layerSelect.className = "geolibre-inat-select";
   layerSelect.disabled = true;
-  form.appendChild(layerSelect);
-
-  const layerHint = el(
-    "div",
-    "geolibre-inat-hint",
-    "Uses the bounding box of the layer selected in the Layers panel.",
+  const layerField = fieldStack(
+    "Layer",
+    layerSelect,
+    "The layer\u2019s bounding box is used, not its exact shape.",
   );
-  layerHint.hidden = true;
-  form.appendChild(layerHint);
+  layerField.hidden = true;
+  areaPanel.appendChild(layerField);
 
   function populateLayerSelect() {
     const app = state.app;
@@ -507,194 +564,244 @@ function renderPanel(container) {
 
   function updateAreaMode() {
     const useLayer = areaLayerRadio.checked;
-    layerHint.hidden = !useLayer;
+    layerField.hidden = !useLayer;
     if (useLayer) {
       populateLayerSelect();
       layerSelect.disabled = false;
     } else {
       layerSelect.disabled = true;
     }
+    refreshAll();
   }
   areaViewRadio.addEventListener("change", updateAreaMode);
   areaLayerRadio.addEventListener("change", updateAreaMode);
+  layerSelect.addEventListener("change", refreshAll);
 
-  // ---- Quality grade --------------------------------------------------------
-  form.appendChild(el("div", "geolibre-inat-section-title", "Quality grade"));
+  // ============================================================
+  // Species
+  // ============================================================
+  const speciesPanel = addSection("species", "eco", "Species");
 
-  const qualitySelect = document.createElement("select");
-  qualitySelect.className = "geolibre-inat-select";
-  for (const grade of QUALITY_GRADES) {
-    const option = el("option", null, grade.label);
-    option.value = grade.value;
-    qualitySelect.appendChild(option);
-  }
-  form.appendChild(qualitySelect);
-
-  form.appendChild(
-    el(
-      "div",
-      "geolibre-inat-hint",
-      "Research: community-confirmed ID. Needs ID: verifiable, not yet confirmed. Casual: not verifiable (e.g. captive/cultivated, or no date or photo).",
-    ),
+  const taxonInput = document.createElement("input");
+  taxonInput.type = "text";
+  taxonInput.placeholder = "e.g. Corvus corax or common raven";
+  taxonInput.className = "geolibre-inat-text-input";
+  taxonInput.autocomplete = "off";
+  speciesPanel.appendChild(
+    fieldStack("Species or common name", taxonInput),
   );
 
-  // ---- Date filter: all years, or a from/to range ---------------------------
-  form.appendChild(el("div", "geolibre-inat-section-title", "Date"));
+  const selectedTaxa = new Set();
+  const taxaField = el("div", "geolibre-inat-field");
+  taxaField.appendChild(el("span", null, "Groups"));
+  const taxaWrap = el("div", "geolibre-inat-chips");
+  for (const taxon of ICONIC_TAXA) {
+    const chip = el("button", "geolibre-inat-chip geolibre-inat-taxon-chip");
+    chip.type = "button";
+    chip.setAttribute("aria-pressed", "false");
+    chip.style.setProperty(
+      "--c",
+      `var(--geolibre-inat-g-${TAXON_GROUP[taxon] || "unknown"})`,
+    );
+    chip.appendChild(el("span", "geolibre-inat-chip-dot"));
+    chip.appendChild(document.createTextNode(taxon));
+    chip.addEventListener("click", () => {
+      if (taxonInput.value.trim()) return;
+      if (selectedTaxa.has(taxon)) selectedTaxa.delete(taxon);
+      else selectedTaxa.add(taxon);
+      chip.setAttribute("aria-pressed", String(selectedTaxa.has(taxon)));
+      refreshAll();
+    });
+    taxaWrap.appendChild(chip);
+  }
+  taxaField.appendChild(taxaWrap);
+  const taxaHelp = el(
+    "p",
+    "geolibre-inat-help",
+    "Groups are ignored while a species name is typed.",
+  );
+  taxaHelp.hidden = true;
+  taxaField.appendChild(taxaHelp);
+  speciesPanel.appendChild(taxaField);
 
-  const dateFilterRow = el("label", "geolibre-inat-row geolibre-inat-checkbox-row");
+  function updateTaxonMode() {
+    const hasTaxonName = taxonInput.value.trim().length > 0;
+    taxaWrap.classList.toggle("is-disabled", hasTaxonName);
+    taxaHelp.hidden = !hasTaxonName;
+  }
+  taxonInput.addEventListener("input", () => {
+    updateTaxonMode();
+    refreshAll();
+  });
+
+  // ============================================================
+  // Quality grade
+  // ============================================================
+  const qualityPanel = addSection("quality", "verified", "Quality grade");
+  const qualityWrap = el("div", "geolibre-inat-chips geolibre-inat-chip-row");
+  let selectedQuality = "";
+  const qualityHelp = el("p", "geolibre-inat-help");
+  const QUALITY_HELP = {
+    "": "Any grade, including casual observations.",
+    research: "The community agrees on the identification.",
+    needs_id: "Can be verified, but the community has not agreed yet.",
+    casual: "Can\u2019t be verified, e.g. captive/cultivated, or a missing date or photo.",
+    "research,needs_id": "Research grade and needs ID together.",
+  };
+  const qualityChips = [];
+  for (const grade of QUALITY_GRADES) {
+    const chip = el("button", "geolibre-inat-chip", grade.label);
+    chip.type = "button";
+    chip.setAttribute("aria-pressed", String(grade.value === selectedQuality));
+    chip.addEventListener("click", () => {
+      selectedQuality = grade.value;
+      for (const c of qualityChips) {
+        c.chip.setAttribute("aria-pressed", String(c.value === selectedQuality));
+      }
+      qualityHelp.textContent = QUALITY_HELP[selectedQuality] || "";
+      refreshAll();
+    });
+    qualityChips.push({ chip, value: grade.value });
+    qualityWrap.appendChild(chip);
+  }
+  qualityHelp.textContent = QUALITY_HELP[""];
+  qualityPanel.appendChild(qualityWrap);
+  qualityPanel.appendChild(qualityHelp);
+
+  // ============================================================
+  // Date
+  // ============================================================
+  const datePanel = addSection("date", "calendar_month", "Date");
+
+  const dateFilterRow = el("label", "geolibre-inat-row geolibre-inat-checkbox-row geolibre-inat-switch-row");
   const dateFilterCheckbox = document.createElement("input");
   dateFilterCheckbox.type = "checkbox";
   dateFilterRow.appendChild(dateFilterCheckbox);
   dateFilterRow.appendChild(el("span", null, "Filter by date"));
-  form.appendChild(dateFilterRow);
+  datePanel.appendChild(dateFilterRow);
 
-  const dateRangeRow = el("div", "geolibre-inat-row");
+  const dateRangeRow = el("div", "geolibre-inat-date-row");
   const dateFromInput = document.createElement("input");
   dateFromInput.type = "date";
   dateFromInput.className = "geolibre-inat-date-input";
   dateFromInput.disabled = true;
+  dateFromInput.setAttribute("aria-label", "From date");
   const dateToInput = document.createElement("input");
   dateToInput.type = "date";
   dateToInput.className = "geolibre-inat-date-input";
   dateToInput.disabled = true;
+  dateToInput.setAttribute("aria-label", "To date");
   dateRangeRow.appendChild(dateFromInput);
   dateRangeRow.appendChild(el("span", null, "to"));
   dateRangeRow.appendChild(dateToInput);
-  form.appendChild(dateRangeRow);
+  datePanel.appendChild(dateRangeRow);
 
-  const dateHint = el(
-    "div",
-    "geolibre-inat-hint",
-    "Unchecked: observations from all years. For a single year, use Jan 1 to Dec 31; for a single day, use the same date twice.",
+  const presetsWrap = el("div", "geolibre-inat-chips geolibre-inat-chip-row geolibre-inat-presets");
+  const DATE_PRESETS = [
+    ["Last 30 days", 0],
+    ["This year", 1],
+    ["Last year", 2],
+  ];
+  for (const [label, n] of DATE_PRESETS) {
+    const presetBtn = el("button", "geolibre-inat-chip", label);
+    presetBtn.type = "button";
+    presetBtn.addEventListener("click", () => {
+      const now = new Date();
+      const iso = (d) => d.toISOString().slice(0, 10);
+      if (n === 0) {
+        const from = new Date(now);
+        from.setDate(from.getDate() - 30);
+        dateFromInput.value = iso(from);
+        dateToInput.value = iso(now);
+      } else if (n === 1) {
+        const y = now.getFullYear();
+        dateFromInput.value = `${y}-01-01`;
+        dateToInput.value = `${y}-12-31`;
+      } else {
+        const y = now.getFullYear() - 1;
+        dateFromInput.value = `${y}-01-01`;
+        dateToInput.value = `${y}-12-31`;
+      }
+      dateFilterCheckbox.checked = true;
+      dateFromInput.disabled = false;
+      dateToInput.disabled = false;
+      refreshAll();
+    });
+    presetsWrap.appendChild(presetBtn);
+  }
+  datePanel.appendChild(presetsWrap);
+  datePanel.appendChild(
+    el("p", "geolibre-inat-help", "Off means observations from every year."),
   );
-  form.appendChild(dateHint);
 
   dateFilterCheckbox.addEventListener("change", () => {
     const enabled = dateFilterCheckbox.checked;
     dateFromInput.disabled = !enabled;
     dateToInput.disabled = !enabled;
+    refreshAll();
   });
+  dateFromInput.addEventListener("input", refreshAll);
+  dateToInput.addEventListener("input", refreshAll);
 
-  // ---- Species / taxon filter ------------------------------------------------
-  form.appendChild(el("div", "geolibre-inat-section-title", "Species / taxon"));
+  // ============================================================
+  // Observer and keyword
+  // ============================================================
+  const peoplePanel = addSection("people", "person_search", "Observer and keyword");
 
-  const taxonRow = el("div", "geolibre-inat-row");
-  const taxonInput = document.createElement("input");
-  taxonInput.type = "text";
-  taxonInput.placeholder = "Scientific or common name (optional)";
-  taxonInput.className = "geolibre-inat-text-input";
-  taxonRow.appendChild(taxonInput);
-  form.appendChild(taxonRow);
-
-  const taxaHint = el(
-    "div",
-    "geolibre-inat-hint",
-    "Leave blank and pick one or more iconic taxa below instead.",
-  );
-  form.appendChild(taxaHint);
-
-  const taxaGrid = el("div", "geolibre-inat-taxa-grid");
-  const taxaCheckboxes = [];
-  for (const taxon of ICONIC_TAXA) {
-    const label = el("label", "geolibre-inat-taxa-item");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = taxon;
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(taxon));
-    taxaGrid.appendChild(label);
-    taxaCheckboxes.push(checkbox);
-  }
-  form.appendChild(taxaGrid);
-
-  function updateTaxonMode() {
-    const hasTaxonName = taxonInput.value.trim().length > 0;
-    taxaGrid.classList.toggle("is-disabled", hasTaxonName);
-    for (const checkbox of taxaCheckboxes) checkbox.disabled = hasTaxonName;
-  }
-  taxonInput.addEventListener("input", updateTaxonMode);
-
-  // ---- Observer / keyword filter ------------------------------------------
-  form.appendChild(el("div", "geolibre-inat-section-title", "Observer / keyword"));
-
-  const userRow = el("div", "geolibre-inat-row");
   const userInput = document.createElement("input");
   userInput.type = "text";
-  userInput.placeholder = "Username(s), comma-separated (optional)";
+  userInput.placeholder = "iNaturalist usernames, comma-separated";
   userInput.className = "geolibre-inat-text-input";
-  userRow.appendChild(userInput);
-  form.appendChild(userRow);
+  userInput.autocomplete = "off";
+  peoplePanel.appendChild(fieldStack("Observer", userInput));
 
-  const userHint = el(
-    "div",
-    "geolibre-inat-hint",
-    "Only observations by these iNaturalist account(s), e.g. \u201cnaturalist_jo, another_user\u201d.",
-  );
-  form.appendChild(userHint);
-
-  const queryRow = el("div", "geolibre-inat-row");
   const queryInput = document.createElement("input");
   queryInput.type = "text";
-  queryInput.placeholder = "Keyword search, e.g. habitat or behaviour (optional)";
+  queryInput.placeholder = "Searches the whole observation";
   queryInput.className = "geolibre-inat-text-input";
-  queryRow.appendChild(queryInput);
-  form.appendChild(queryRow);
+  queryInput.autocomplete = "off";
+  peoplePanel.appendChild(fieldStack("Keyword", queryInput));
 
-  const queryHint = el(
-    "div",
-    "geolibre-inat-hint",
-    "Free-text search across the whole observation (like rinat's \u201cquery\u201d) - broader than the species field above.",
-  );
-  form.appendChild(queryHint);
+  userInput.addEventListener("input", refreshAll);
+  queryInput.addEventListener("input", refreshAll);
 
-  // ---- Advanced filters (rinat) ---------------------------------------------
-  // Collapsed by default: these are the get_inat_obs() arguments the basic
-  // form doesn't cover, so the panel stays short for everyday use.
-  const advanced = document.createElement("details");
-  advanced.className = "geolibre-inat-advanced";
-  advanced.appendChild(
-    el(
-      "summary",
-      "geolibre-inat-section-title geolibre-inat-advanced-summary",
-      "Advanced filters (rinat)",
+  // ============================================================
+  // Advanced filters
+  // ============================================================
+  const advPanel = addSection("adv", "tune", "Advanced filters");
+
+  const taxonIdInput = document.createElement("input");
+  taxonIdInput.type = "text";
+  taxonIdInput.placeholder = "e.g. 47219, comma-separated";
+  taxonIdInput.className = "geolibre-inat-text-input";
+  taxonIdInput.autocomplete = "off";
+  advPanel.appendChild(
+    fieldStack(
+      "Taxon ID",
+      taxonIdInput,
+      "Exact iNaturalist taxon ID(s), descendants included.",
     ),
   );
-  const advancedBody = el("div", "geolibre-inat-advanced-body");
-  advanced.appendChild(advancedBody);
 
-  // Adds "label, control, hint" as one field; returns the control.
-  function addAdvancedField(labelText, control, hintText) {
-    advancedBody.appendChild(el("div", "geolibre-inat-field-label", labelText));
-    advancedBody.appendChild(control);
-    if (hintText) advancedBody.appendChild(el("div", "geolibre-inat-hint", hintText));
-    return control;
-  }
-
-  function makeTextRow(placeholder) {
-    const row = el("div", "geolibre-inat-row");
-    const input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = placeholder;
-    input.className = "geolibre-inat-text-input";
-    row.appendChild(input);
-    return { row, input };
-  }
-
-  const taxonIdField = makeTextRow("e.g. 47219 (comma-separated for several)");
-  const taxonIdInput = taxonIdField.input;
-  addAdvancedField(
-    "Taxon ID",
-    taxonIdField.row,
-    "Exact iNaturalist taxon ID(s), descendants included \u2014 the number in a taxon's URL (\u2026/taxa/47219-\u2026). Must match together with the species / iconic-taxa filters above.",
+  const placeIdInput = document.createElement("input");
+  placeIdInput.type = "text";
+  placeIdInput.placeholder = "e.g. 6744, comma-separated";
+  placeIdInput.className = "geolibre-inat-text-input";
+  placeIdInput.autocomplete = "off";
+  advPanel.appendChild(
+    fieldStack(
+      "Place ID",
+      placeIdInput,
+      "Also limited by the Area above unless you tick \u201cSearch everywhere\u201d below.",
+    ),
   );
 
-  const placeIdField = makeTextRow("e.g. 6744 (comma-separated for several)");
-  const placeIdInput = placeIdField.input;
-  addAdvancedField(
-    "Place ID",
-    placeIdField.row,
-    "iNaturalist place ID(s) \u2014 the number in a place's URL on Explore. Also limited by the Area above unless you tick \u201cIgnore the Area\u201d below.",
-  );
+  const projectInput = document.createElement("input");
+  projectInput.type = "text";
+  projectInput.placeholder = "ID or slug, e.g. crows-in-vermont";
+  projectInput.className = "geolibre-inat-text-input";
+  projectInput.autocomplete = "off";
+  advPanel.appendChild(fieldStack("Project", projectInput));
 
   const photoLicenseSelect = document.createElement("select");
   photoLicenseSelect.className = "geolibre-inat-select";
@@ -703,25 +810,14 @@ function renderPanel(container) {
     option.value = license.value;
     photoLicenseSelect.appendChild(option);
   }
-  addAdvancedField(
-    "Photo license",
-    photoLicenseSelect,
-    "Only observations with a photo under this license, so observations without photos are left out.",
-  );
+  advPanel.appendChild(fieldStack("Photo license", photoLicenseSelect));
 
-  const projectField = makeTextRow("ID or slug, e.g. crows-in-vermont");
-  const projectInput = projectField.input;
-  addAdvancedField(
-    "Project",
-    projectField.row,
-    "Project ID or URL slug (comma-separated for several). Only observations added to the project.",
-  );
-
-  // Annotation = a term (life stage, sex, ...) and, optionally, one of its
-  // values (adult, female, ...) - rinat's two-element `annotation` vector.
-  const annotationRow = el("div", "geolibre-inat-row");
+  const annotationField = el("div", "geolibre-inat-field");
+  annotationField.appendChild(el("span", null, "Annotation"));
+  const annotationRow = el("div", "geolibre-inat-two");
   const annotationTermSelect = document.createElement("select");
   annotationTermSelect.className = "geolibre-inat-select";
+  annotationTermSelect.setAttribute("aria-label", "Annotation");
   const noTermOption = el("option", null, "No annotation filter");
   noTermOption.value = "";
   annotationTermSelect.appendChild(noTermOption);
@@ -732,8 +828,11 @@ function renderPanel(container) {
   }
   const annotationValueSelect = document.createElement("select");
   annotationValueSelect.className = "geolibre-inat-select";
+  annotationValueSelect.setAttribute("aria-label", "Annotation value");
   annotationRow.appendChild(annotationTermSelect);
   annotationRow.appendChild(annotationValueSelect);
+  annotationField.appendChild(annotationRow);
+  advPanel.appendChild(annotationField);
 
   function updateAnnotationValues() {
     const term = ANNOTATION_TERMS.find(
@@ -754,38 +853,44 @@ function renderPanel(container) {
     }
     annotationValueSelect.disabled = false;
   }
-  annotationTermSelect.addEventListener("change", updateAnnotationValues);
+  annotationTermSelect.addEventListener("change", () => {
+    updateAnnotationValues();
+    refreshAll();
+  });
+  annotationValueSelect.addEventListener("change", refreshAll);
   updateAnnotationValues();
-
-  addAdvancedField(
-    "Annotation",
-    annotationRow,
-    "Pick a term, then optionally a value \u2014 e.g. Life stage \u2192 Larva. Leaving the value on \u201cAny value\u201d keeps every observation that has that annotation.",
-  );
 
   const ignoreAreaRow = el("label", "geolibre-inat-row geolibre-inat-checkbox-row");
   const ignoreAreaCheckbox = document.createElement("input");
   ignoreAreaCheckbox.type = "checkbox";
   ignoreAreaRow.appendChild(ignoreAreaCheckbox);
   ignoreAreaRow.appendChild(
-    el("span", null, "Ignore the Area (don\u2019t limit to the view / layer extent)"),
+    el("span", null, "Search everywhere, ignoring the area"),
   );
-  advancedBody.appendChild(ignoreAreaRow);
-  advancedBody.appendChild(
-    el(
-      "div",
-      "geolibre-inat-hint",
-      "Useful when a place or project reaches beyond the current view. Needs at least one other filter (species, taxon ID, place, project, observer or keyword).",
-    ),
-  );
+  ignoreAreaRow.title =
+    "Needs at least one other filter (species, taxon ID, place, project, observer or keyword).";
+  ignoreAreaCheckbox.addEventListener("change", refreshAll);
+  advPanel.appendChild(ignoreAreaRow);
 
-  form.appendChild(advanced);
+  taxonIdInput.addEventListener("input", refreshAll);
+  placeIdInput.addEventListener("input", refreshAll);
+  projectInput.addEventListener("input", refreshAll);
+  photoLicenseSelect.addEventListener("change", refreshAll);
 
-  // ---- Max observations -------------------------------------------------
-  form.appendChild(el("div", "geolibre-inat-section-title", "Results"));
+  // ============================================================
+  // Footer: active filters, match estimate, request size, action
+  // ============================================================
+  const foot = el("div", "geolibre-inat-foot");
+  root.appendChild(foot);
 
-  const maxRow = el("label", "geolibre-inat-row");
-  maxRow.appendChild(el("span", "geolibre-inat-row-label", "Max observations"));
+  const chipsRow = el("div", "geolibre-inat-active-chips");
+  foot.appendChild(chipsRow);
+
+  const matchEl = el("p", "geolibre-inat-match");
+  foot.appendChild(matchEl);
+
+  const limitRow = el("div", "geolibre-inat-limit");
+  const limitLabel = el("label", null, "Fetch up to");
   const maxInput = document.createElement("input");
   maxInput.type = "number";
   maxInput.min = "10";
@@ -793,45 +898,423 @@ function renderPanel(container) {
   maxInput.step = "10";
   maxInput.value = String(DEFAULT_MAX_OBS);
   maxInput.className = "geolibre-inat-number-input";
-  maxRow.appendChild(maxInput);
-  form.appendChild(maxRow);
+  limitLabel.htmlFor = "";
+  const limitNum = el("span", "geolibre-inat-limit-num");
+  limitNum.appendChild(maxInput);
+  limitNum.appendChild(document.createTextNode(" observations"));
+  limitRow.appendChild(limitLabel);
+  limitRow.appendChild(limitNum);
+  foot.appendChild(limitRow);
 
-  const hint = el(
-    "div",
-    "geolibre-inat-hint",
-    "Only observations with real coordinates are extracted. A photo is included whenever the observation has one, but it's never required.",
-  );
-  form.appendChild(hint);
+  const rangeInput = document.createElement("input");
+  rangeInput.type = "range";
+  rangeInput.min = "10";
+  rangeInput.max = String(MAX_ALLOWED_OBS);
+  rangeInput.step = "10";
+  rangeInput.value = String(DEFAULT_MAX_OBS);
+  rangeInput.className = "geolibre-inat-range";
+  rangeInput.setAttribute("aria-label", "Max observations");
+  foot.appendChild(rangeInput);
 
-  const fetchButton = el("button", "geolibre-inat-primary-button", "Fetch observations");
-  fetchButton.type = "button";
-  form.appendChild(fetchButton);
+  maxInput.addEventListener("input", () => {
+    const v = clamp(parseInt(maxInput.value, 10) || DEFAULT_MAX_OBS, 10, MAX_ALLOWED_OBS);
+    rangeInput.value = String(v);
+    refreshAll();
+  });
+  rangeInput.addEventListener("input", () => {
+    maxInput.value = rangeInput.value;
+    refreshAll();
+  });
 
-  const status = el("div", "geolibre-inat-status");
+  const problem = el("p", "geolibre-inat-problem");
+  problem.hidden = true;
+  foot.appendChild(problem);
+
+  const status = el("p", "geolibre-inat-status");
   status.hidden = true;
-  form.appendChild(status);
-
-  root.appendChild(form);
+  foot.appendChild(status);
 
   const results = el("div", "geolibre-inat-results");
   results.hidden = true;
-  root.appendChild(results);
+  foot.appendChild(results);
+
+  const go = el("button", "geolibre-inat-go");
+  go.type = "button";
+  foot.appendChild(go);
 
   const credit = el(
-    "div",
+    "p",
     "geolibre-inat-credit",
     "Data and photos courtesy of the iNaturalist community.",
   );
-  root.appendChild(credit);
+  foot.appendChild(credit);
 
-  fetchButton.addEventListener("click", () => {
-    const iconicTaxa = taxaCheckboxes
-      .filter((c) => c.checked && !c.disabled)
-      .map((c) => c.value);
+  // ---- Active filter chips (removable) -------------------------------------
+  function renderChips() {
+    chipsRow.replaceChildren();
+    const chips = [];
+
+    if (areaLayerRadio.checked) {
+      const name = layerSelect.options[layerSelect.selectedIndex]?.text || "layer";
+      chips.push({
+        text: `Layer: ${name}`,
+        remove: () => {
+          areaViewRadio.checked = true;
+          updateAreaMode();
+        },
+      });
+    }
+    const speciesText = taxonInput.value.trim();
+    if (speciesText) {
+      chips.push({
+        text: `Species: ${speciesText}`,
+        remove: () => {
+          taxonInput.value = "";
+          updateTaxonMode();
+          refreshAll();
+        },
+      });
+    } else {
+      for (const taxon of selectedTaxa) {
+        chips.push({
+          text: taxon,
+          remove: () => {
+            selectedTaxa.delete(taxon);
+            const btn = taxaWrap.querySelector(
+              `.geolibre-inat-taxon-chip:nth-child(${ICONIC_TAXA.indexOf(taxon) + 1})`,
+            );
+            if (btn) btn.setAttribute("aria-pressed", "false");
+            refreshAll();
+          },
+        });
+      }
+    }
+    if (selectedQuality) {
+      const grade = QUALITY_GRADES.find((g) => g.value === selectedQuality);
+      chips.push({
+        text: grade ? grade.label : selectedQuality,
+        remove: () => {
+          selectedQuality = "";
+          for (const c of qualityChips) c.chip.setAttribute("aria-pressed", String(c.value === ""));
+          qualityHelp.textContent = QUALITY_HELP[""];
+          refreshAll();
+        },
+      });
+    }
+    if (dateFilterCheckbox.checked) {
+      chips.push({
+        text: `${dateFromInput.value || "\u2026"} \u2192 ${dateToInput.value || "\u2026"}`,
+        remove: () => {
+          dateFilterCheckbox.checked = false;
+          dateFromInput.disabled = true;
+          dateToInput.disabled = true;
+          refreshAll();
+        },
+      });
+    }
+    if (userInput.value.trim()) {
+      chips.push({
+        text: `Observer: ${userInput.value.trim()}`,
+        remove: () => {
+          userInput.value = "";
+          refreshAll();
+        },
+      });
+    }
+    if (queryInput.value.trim()) {
+      chips.push({
+        text: `Keyword: ${queryInput.value.trim()}`,
+        remove: () => {
+          queryInput.value = "";
+          refreshAll();
+        },
+      });
+    }
+    if (taxonIdInput.value.trim()) {
+      chips.push({
+        text: `Taxon ID: ${taxonIdInput.value.trim()}`,
+        remove: () => {
+          taxonIdInput.value = "";
+          refreshAll();
+        },
+      });
+    }
+    if (placeIdInput.value.trim()) {
+      chips.push({
+        text: `Place ID: ${placeIdInput.value.trim()}`,
+        remove: () => {
+          placeIdInput.value = "";
+          refreshAll();
+        },
+      });
+    }
+    if (projectInput.value.trim()) {
+      chips.push({
+        text: `Project: ${projectInput.value.trim()}`,
+        remove: () => {
+          projectInput.value = "";
+          refreshAll();
+        },
+      });
+    }
+    if (photoLicenseSelect.value) {
+      const license = PHOTO_LICENSES.find((l) => l.value === photoLicenseSelect.value);
+      chips.push({
+        text: license ? license.label : photoLicenseSelect.value,
+        remove: () => {
+          photoLicenseSelect.value = "";
+          refreshAll();
+        },
+      });
+    }
+    if (annotationTermSelect.value) {
+      const label = describeAnnotation(annotationTermSelect.value, annotationValueSelect.value);
+      chips.push({
+        text: label || "Annotation",
+        remove: () => {
+          annotationTermSelect.value = "";
+          updateAnnotationValues();
+          refreshAll();
+        },
+      });
+    }
+    if (ignoreAreaCheckbox.checked) {
+      chips.push({
+        text: "Ignoring area",
+        remove: () => {
+          ignoreAreaCheckbox.checked = false;
+          refreshAll();
+        },
+      });
+    }
+
+    chipsRow.hidden = chips.length === 0;
+    for (const c of chips) {
+      const tag = el("span", "geolibre-inat-tag");
+      tag.appendChild(document.createTextNode(c.text));
+      const removeBtn = el("button", null, "\u00d7");
+      removeBtn.type = "button";
+      removeBtn.setAttribute("aria-label", `Remove ${c.text}`);
+      removeBtn.addEventListener("click", c.remove);
+      tag.appendChild(removeBtn);
+      chipsRow.appendChild(tag);
+    }
+  }
+
+  // ---- Section header "value" previews -------------------------------------
+  function updateSectionValues() {
+    const areaVal = sections.get("area").valueEl;
+    if (areaLayerRadio.checked) {
+      areaVal.textContent = layerSelect.options[layerSelect.selectedIndex]?.text || "Layer";
+      areaVal.classList.add("set");
+    } else {
+      areaVal.textContent = "Current view";
+      areaVal.classList.remove("set");
+    }
+
+    const speciesVal = sections.get("species").valueEl;
+    const speciesText = taxonInput.value.trim();
+    if (speciesText) {
+      speciesVal.textContent = speciesText;
+      speciesVal.classList.add("set");
+    } else if (selectedTaxa.size > 0) {
+      speciesVal.textContent = `${selectedTaxa.size} group${selectedTaxa.size === 1 ? "" : "s"}`;
+      speciesVal.classList.add("set");
+    } else {
+      speciesVal.textContent = "";
+      speciesVal.classList.remove("set");
+    }
+
+    const qualityVal = sections.get("quality").valueEl;
+    const grade = QUALITY_GRADES.find((g) => g.value === selectedQuality);
+    qualityVal.textContent = selectedQuality ? grade?.label || "" : "";
+    qualityVal.classList.toggle("set", Boolean(selectedQuality));
+
+    const dateVal = sections.get("date").valueEl;
+    if (dateFilterCheckbox.checked) {
+      dateVal.textContent = `${dateFromInput.value || "\u2026"} \u2013 ${dateToInput.value || "\u2026"}`;
+      dateVal.classList.add("set");
+    } else {
+      dateVal.textContent = "All years";
+      dateVal.classList.remove("set");
+    }
+
+    const peopleVal = sections.get("people").valueEl;
+    const peopleParts = [];
+    if (userInput.value.trim()) peopleParts.push("Observer");
+    if (queryInput.value.trim()) peopleParts.push("Keyword");
+    peopleVal.textContent = peopleParts.join(" + ");
+    peopleVal.classList.toggle("set", peopleParts.length > 0);
+
+    const advVal = sections.get("adv").valueEl;
+    const advCount = [
+      taxonIdInput.value.trim(),
+      placeIdInput.value.trim(),
+      projectInput.value.trim(),
+      photoLicenseSelect.value,
+      annotationTermSelect.value,
+      ignoreAreaCheckbox.checked ? "1" : "",
+    ].filter(Boolean).length;
+    advVal.textContent = advCount > 0 ? `${advCount} filter${advCount === 1 ? "" : "s"}` : "";
+    advVal.classList.toggle("set", advCount > 0);
+  }
+
+  // ---- "Fetch N observations" label ----------------------------------------
+  function currentMax() {
+    return clamp(parseInt(maxInput.value, 10) || DEFAULT_MAX_OBS, 10, MAX_ALLOWED_OBS);
+  }
+  function idleGoLabel() {
+    return `Fetch ${formatCount(currentMax())} observations`;
+  }
+  function updateGoButton() {
+    if (state.fetching) {
+      go.textContent = "Cancel";
+      go.classList.add("is-busy");
+    } else {
+      go.textContent = idleGoLabel();
+      go.classList.remove("is-busy");
+    }
+  }
+
+  // ---- Live "About N observations match" estimate ---------------------------
+  let estimateController = null;
+  let estimateTimer = null;
+
+  function scheduleMatchEstimate() {
+    clearTimeout(estimateTimer);
+    estimateTimer = setTimeout(updateMatchEstimate, 500);
+  }
+
+  async function updateMatchEstimate() {
+    if (state.fetching) return;
+    estimateController?.abort();
+    const controller = new AbortController();
+    estimateController = controller;
+
+    try {
+      const taxonParsed = parseIdList(taxonIdInput.value);
+      const placeParsed = parseIdList(placeIdInput.value);
+      if (taxonParsed.invalid.length > 0 || placeParsed.invalid.length > 0) {
+        matchEl.textContent = "";
+        return;
+      }
+
+      let bounds = null;
+      if (!ignoreAreaCheckbox.checked) {
+        if (areaLayerRadio.checked) {
+          if (!layerSelect.value) {
+            matchEl.textContent = "";
+            return;
+          }
+          let features = [];
+          try {
+            features = state.app?.getLayerFeatures?.(layerSelect.value) ?? [];
+          } catch {
+            matchEl.textContent = "";
+            return;
+          }
+          bounds = computeBoundsFromFeatures(features);
+          if (!bounds) {
+            matchEl.textContent = "";
+            return;
+          }
+        } else {
+          bounds = state.app?.getViewBounds?.() ?? null;
+          if (!bounds) {
+            matchEl.textContent = "";
+            return;
+          }
+        }
+      }
+
+      const speciesText = taxonInput.value.trim();
+      const iconicTaxa = speciesText ? [] : Array.from(selectedTaxa);
+      const d1 = dateFilterCheckbox.checked ? toIsoDate(dateFromInput.value) : null;
+      const d2 = dateFilterCheckbox.checked ? toIsoDate(dateToInput.value) : null;
+
+      const url = buildRequestUrl({
+        bounds,
+        qualityGrade: selectedQuality || null,
+        page: 1,
+        perPage: 0,
+        d1,
+        d2,
+        taxonName: speciesText || null,
+        iconicTaxa,
+        userLogins: splitList(userInput.value),
+        query: queryInput.value.trim() || null,
+        taxonIds: taxonParsed.ids,
+        placeIds: placeParsed.ids,
+        projectIds: splitList(projectInput.value),
+        photoLicense: photoLicenseSelect.value || null,
+        termId: annotationTermSelect.value || null,
+        termValueId: annotationValueSelect.value || null,
+      });
+
+      matchEl.textContent = "Checking match count\u2026";
+      const data = await fetchJsonWithTimeout(url, controller.signal, 12000);
+      if (controller.signal.aborted) return;
+      const total = typeof data.total_results === "number" ? data.total_results : null;
+      matchEl.textContent =
+        total === null ? "" : `About ${formatCount(total)} observation${total === 1 ? "" : "s"} match`;
+    } catch {
+      if (!controller.signal.aborted) matchEl.textContent = "";
+    }
+  }
+
+  // ---- One place that wires every "something changed" reaction -------------
+  function refreshAll() {
+    updateSectionValues();
+    renderChips();
+    updateGoButton();
+    scheduleMatchEstimate();
+  }
+
+  resetButton.addEventListener("click", () => {
+    areaViewRadio.checked = true;
+    updateAreaMode();
+    taxonInput.value = "";
+    updateTaxonMode();
+    selectedTaxa.clear();
+    taxaWrap
+      .querySelectorAll(".geolibre-inat-taxon-chip")
+      .forEach((c) => c.setAttribute("aria-pressed", "false"));
+    selectedQuality = "";
+    for (const c of qualityChips) c.chip.setAttribute("aria-pressed", String(c.value === ""));
+    qualityHelp.textContent = QUALITY_HELP[""];
+    dateFilterCheckbox.checked = false;
+    dateFromInput.value = "";
+    dateToInput.value = "";
+    dateFromInput.disabled = true;
+    dateToInput.disabled = true;
+    userInput.value = "";
+    queryInput.value = "";
+    taxonIdInput.value = "";
+    placeIdInput.value = "";
+    projectInput.value = "";
+    photoLicenseSelect.value = "";
+    annotationTermSelect.value = "";
+    updateAnnotationValues();
+    ignoreAreaCheckbox.checked = false;
+    setStatus(status, "");
+    problem.hidden = true;
+    setResults(results, null);
+    refreshAll();
+  });
+
+  go.addEventListener("click", () => {
+    if (state.fetching) {
+      state.abortController?.abort();
+      return;
+    }
+    problem.hidden = true;
+    const iconicTaxa = taxonInput.value.trim()
+      ? []
+      : Array.from(selectedTaxa);
     void runExtraction({
       areaMode: areaLayerRadio.checked ? "layer" : "view",
       layerId: layerSelect.value || null,
-      qualityGrade: qualitySelect.value || null,
+      qualityGrade: selectedQuality || null,
       taxonIdsRaw: taxonIdInput.value,
       placeIdsRaw: placeIdInput.value,
       projectRaw: projectInput.value,
@@ -839,7 +1322,7 @@ function renderPanel(container) {
       annotationTermId: annotationTermSelect.value || null,
       annotationValueId: annotationValueSelect.value || null,
       ignoreArea: ignoreAreaCheckbox.checked,
-      maxObs: clamp(parseInt(maxInput.value, 10) || DEFAULT_MAX_OBS, 10, MAX_ALLOWED_OBS),
+      maxObs: currentMax(),
       useDateFilter: dateFilterCheckbox.checked,
       dateFrom: dateFromInput.value || null,
       dateTo: dateToInput.value || null,
@@ -850,15 +1333,18 @@ function renderPanel(container) {
         .map((s) => s.trim())
         .filter(Boolean),
       query: queryInput.value.trim() || null,
-      fetchButton,
+      goButton: go,
+      getIdleLabel: idleGoLabel,
       status,
+      problem,
       results,
-    });
+    }).then(refreshAll);
   });
 
   // Populate the layer dropdown once up front so it isn't empty the first
-  // time the user switches to "Active layer extent".
+  // time the user switches to "Extent of a layer".
   populateLayerSelect();
+  refreshAll();
 
   // GeoLibre calls render(container) once with an empty element that the
   // plugin has to fill itself (see GeoLibre's plugin API docs), so the panel
@@ -870,9 +1356,15 @@ function renderPanel(container) {
   };
 }
 
+
 function setStatus(status, text) {
   status.hidden = !text;
   status.textContent = text || "";
+}
+
+function setProblem(problem, text) {
+  problem.hidden = !text;
+  problem.textContent = text || "";
 }
 
 function setResults(results, lines) {
@@ -957,6 +1449,46 @@ function buildRequestUrl({
   return `${API_BASE}?${params.toString()}`;
 }
 
+// photo1 ... photo5 = full-size photo URLs; unused slots stay null so every
+// feature has the same columns.
+const MAX_PHOTOS = 5;
+
+function photoColumns(photos) {
+  const columns = {};
+  for (let i = 0; i < MAX_PHOTOS; i += 1) {
+    const photo = photos[i];
+    columns[`photo${i + 1}`] = photo ? photo.large || photo.thumb || null : null;
+  }
+  return columns;
+}
+
+// Rebuilds the popup's photo list from the photo1..photoN columns. Layers
+// saved by v1.3.x carry a `photos` array (or its JSON string) instead, which
+// is still understood so old projects keep their popups.
+function photosFromProps(props) {
+  const photos = [];
+  for (let i = 1; i <= MAX_PHOTOS; i += 1) {
+    const large = httpUrl(props[`photo${i}`]);
+    if (!large) continue;
+    photos.push({
+      large,
+      thumb: large.replace(/\/large\.([a-z]+)/i, "/square.$1"),
+      attribution: i === 1 ? props.photoAttribution || null : null,
+    });
+  }
+  if (photos.length > 0) return photos;
+
+  let legacy = props.photos;
+  if (typeof legacy === "string") {
+    try {
+      legacy = JSON.parse(legacy);
+    } catch {
+      legacy = [];
+    }
+  }
+  return Array.isArray(legacy) ? legacy : [];
+}
+
 // Maps one iNaturalist observation to a GeoJSON Feature. Returns null for an
 // observation with no usable coordinates (defensive - the request already
 // asks for geo=true, but a feature this can't place is still worth skipping
@@ -971,12 +1503,13 @@ function observationToFeature(obs) {
     ? obs.observation_photos
         .map((entry) => entry && entry.photo)
         .filter(Boolean)
-        .slice(0, 5)
+        .slice(0, MAX_PHOTOS)
         .map((photo) => ({
-          thumb: photo.square_url || photo.url || null,
-          large:
+          thumb: httpUrl(photo.square_url || photo.url),
+          large: httpUrl(
             photo.large_url ||
-            (photo.url ? photo.url.replace("square.", "large.") : null),
+              (photo.url ? photo.url.replace("square.", "large.") : null),
+          ),
           attribution: photo.attribution_name || photo.attribution || null,
         }))
         .filter((p) => p.thumb || p.large)
@@ -1017,9 +1550,54 @@ function observationToFeature(obs) {
         typeof obs.positional_accuracy === "number" ? obs.positional_accuracy : null,
       uri: obs.uri || `https://www.inaturalist.org/observations/${obs.id}`,
       taxonUrl: taxon.id ? `https://www.inaturalist.org/taxa/${taxon.id}` : null,
-      photos,
+      // Flat columns, one plain http(s) URL each (never a nested array or a
+      // JSON string), so attribute tables and exports show a link per photo.
+      photoCount: photos.length,
+      ...photoColumns(photos),
+      photoAttribution: (photos[0] && photos[0].attribution) || null,
     },
   };
+}
+
+// One iNaturalist request (headers + body) with a hard time limit. If the
+// server never answers, the request is aborted so the panel is released again
+// instead of staying on "Fetching" forever. Closing the plugin still cancels
+// the request through `outerSignal`; that abort is reported as an AbortError
+// and stays silent, while a timeout is thrown as an ordinary, visible error.
+// (AbortController + setTimeout rather than AbortSignal.timeout/any, so it
+// works on every browser the host supports.)
+async function fetchJsonWithTimeout(url, outerSignal, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const onOuterAbort = () => controller.abort();
+  if (outerSignal) {
+    if (outerSignal.aborted) controller.abort();
+    else outerSignal.addEventListener("abort", onOuterAbort, { once: true });
+  }
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`iNaturalist API responded with ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    if (timedOut) {
+      throw new Error(
+        `iNaturalist did not answer within ${Math.round(timeoutMs / 1000)} s - try again in a moment.`,
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    if (outerSignal) outerSignal.removeEventListener("abort", onOuterAbort);
+  }
 }
 
 async function runExtraction({
@@ -1041,8 +1619,10 @@ async function runExtraction({
   iconicTaxa,
   userLogins,
   query,
-  fetchButton,
+  goButton,
+  getIdleLabel,
   status,
+  problem,
   results,
 }) {
   if (state.fetching) return;
@@ -1054,16 +1634,16 @@ async function runExtraction({
   // ID or a slug. Bad input is reported rather than silently dropped.
   const taxonParsed = parseIdList(taxonIdsRaw);
   if (taxonParsed.invalid.length > 0) {
-    setStatus(
-      status,
+    setProblem(
+      problem,
       `Taxon ID must be a number (e.g. 47219) - not \u201c${taxonParsed.invalid.join(", ")}\u201d.`,
     );
     return;
   }
   const placeParsed = parseIdList(placeIdsRaw);
   if (placeParsed.invalid.length > 0) {
-    setStatus(
-      status,
+    setProblem(
+      problem,
       `Place ID must be a number (e.g. 6744) - not \u201c${placeParsed.invalid.join(", ")}\u201d.`,
     );
     return;
@@ -1080,11 +1660,12 @@ async function runExtraction({
       placeIds.length > 0 ||
       projectIds.length > 0 ||
       (userLogins && userLogins.length > 0) ||
-      Boolean(query);
+      Boolean(query) ||
+      Boolean(annotationTermId);
     if (!hasOtherFilter) {
-      setStatus(
-        status,
-        "Ignoring the Area needs at least one other filter (species, taxon ID, place, project, observer or keyword).",
+      setProblem(
+        problem,
+        "Ignoring the Area needs at least one filter that narrows the search: species or iconic taxa, taxon ID, place, project, observer, keyword or annotation. Date, quality grade and photo license alone are not enough.",
       );
       return;
     }
@@ -1094,7 +1675,7 @@ async function runExtraction({
   if (!ignoreArea) {
     if (areaMode === "layer") {
       if (!layerId) {
-        setStatus(status, "Pick a layer first, or switch to \u201cCurrent map view\u201d.");
+        setProblem(problem, "Pick a layer first, or switch to \u201cCurrent map view\u201d.");
         return;
       }
       // getLayerFeatures throws for an unknown layer id (e.g. the layer was
@@ -1104,18 +1685,18 @@ async function runExtraction({
       try {
         features = app.getLayerFeatures?.(layerId) ?? [];
       } catch {
-        setStatus(status, "That layer is no longer available - pick another one from the list.");
+        setProblem(problem, "That layer is no longer available - pick another one from the list.");
         return;
       }
       bounds = computeBoundsFromFeatures(features);
       if (!bounds) {
-        setStatus(status, "That layer has no usable geometry to derive an extent from.");
+        setProblem(problem, "That layer has no usable geometry to derive an extent from.");
         return;
       }
     } else {
       bounds = app.getViewBounds?.() ?? null;
       if (!bounds) {
-        setStatus(status, "Current map extent isn't available right now - pan or zoom the map and try again.");
+        setProblem(problem, "Current map extent isn't available right now - pan or zoom the map and try again.");
         return;
       }
     }
@@ -1124,18 +1705,21 @@ async function runExtraction({
   const d1 = useDateFilter ? toIsoDate(dateFrom) : null;
   const d2 = useDateFilter ? toIsoDate(dateTo) : null;
   if (useDateFilter && !d1 && !d2) {
-    setStatus(status, "Pick at least a start or end date, or uncheck \u201cFilter by date\u201d.");
+    setProblem(problem, "Pick at least a start or end date, or uncheck \u201cFilter by date\u201d.");
     return;
   }
 
+  setProblem(problem, "");
   state.fetching = true;
   state.abortController = new AbortController();
-  fetchButton.disabled = true;
+  goButton.disabled = false;
+  goButton.classList.add("is-busy");
+  goButton.textContent = "Cancel";
   setResults(results, null);
   setStatus(status, "Contacting iNaturalist\u2026");
 
-  const perPage = Math.min(PER_PAGE_LIMIT, maxObs);
-  let totalPages = Math.ceil(maxObs / perPage);
+  const { perPage, totalPages: plannedPages } = planPaging(maxObs);
+  let totalPages = plannedPages;
   const collected = [];
   let totalAvailable = null;
 
@@ -1159,16 +1743,7 @@ async function runExtraction({
         termId: annotationTermId,
         termValueId: annotationValueId,
       });
-      const response = await fetch(url, {
-        headers: { Accept: "application/json" },
-        signal: state.abortController.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`iNaturalist API responded with ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await fetchJsonWithTimeout(url, state.abortController.signal);
 
       if (totalAvailable === null) {
         totalAvailable = typeof data.total_results === "number" ? data.total_results : null;
@@ -1182,7 +1757,7 @@ async function runExtraction({
 
       setStatus(
         status,
-        `Fetched ${formatCount(collected.length)}${
+        `Fetched ${formatCount(Math.min(collected.length, maxObs))}${
           totalAvailable !== null ? ` / ${formatCount(Math.min(totalAvailable, maxObs))}` : ""
         } observation(s)\u2026`,
       );
@@ -1191,17 +1766,19 @@ async function runExtraction({
       if (page < totalPages) await sleep(PAGE_DELAY_MS);
     }
 
+    // The last page can overshoot by a few rows; never keep more than asked for.
+    if (collected.length > maxObs) collected.length = maxObs;
+
     if (collected.length === 0) {
       setStatus(status, "No observations with coordinates matched these filters.");
       return;
     }
 
     const features = collected.map(observationToFeature).filter(Boolean);
-    const withPhotos = features.filter((f) => f.properties.photos.length > 0).length;
+    const withPhotos = features.filter((f) => f.properties.photoCount > 0).length;
 
     const featureCollection = { type: "FeatureCollection", features };
 
-    state.layerCount += 1;
     const layerName = `iNaturalist observations (${formatCount(features.length)})`;
     app.addGeoJsonLayer(layerName, featureCollection);
 
@@ -1251,13 +1828,16 @@ async function runExtraction({
     }
     setResults(results, lines);
   } catch (error) {
-    if (error?.name !== "AbortError") {
+    if (error?.name === "AbortError") {
+      setStatus(status, "Cancelled.");
+    } else {
       setStatus(status, `Could not fetch observations: ${error.message || error}`);
     }
   } finally {
     state.fetching = false;
     state.abortController = null;
-    fetchButton.disabled = false;
+    goButton.classList.remove("is-busy");
+    goButton.textContent = getIdleLabel();
   }
 }
 
@@ -1303,15 +1883,7 @@ function showPopup(map, feature, lngLat) {
   closePopup();
 
   const props = feature.properties || {};
-  let photos = props.photos;
-  if (typeof photos === "string") {
-    try {
-      photos = JSON.parse(photos);
-    } catch {
-      photos = [];
-    }
-  }
-  if (!Array.isArray(photos)) photos = [];
+  const photos = photosFromProps(props);
 
   const container = map.getContainer();
   const popupEl = el("div", "geolibre-inat-popup");
@@ -1331,16 +1903,18 @@ function showPopup(map, feature, lngLat) {
     photos.slice(0, 3).forEach((photo, index) => {
       const src = photo.thumb || photo.large;
       if (!src) return;
+      const anchor = document.createElement("a");
+      anchor.href = photo.large || src;
+      anchor.target = "_blank";
+      anchor.rel = "noopener";
+      anchor.className = "geolibre-inat-popup-photo" + (index === 0 ? " is-main" : "");
       const img = document.createElement("img");
       img.src = src;
       img.loading = "lazy";
       img.alt = props.commonName || props.name || "iNaturalist observation photo";
-      img.className = "geolibre-inat-popup-thumb" + (index === 0 ? " is-main" : "");
-      img.addEventListener("click", (event) => {
-        event.stopPropagation();
-        window.open(photo.large || src, "_blank", "noopener");
-      });
-      photoStrip.appendChild(img);
+      img.className = "geolibre-inat-popup-thumb";
+      anchor.appendChild(img);
+      photoStrip.appendChild(anchor);
     });
     popupEl.appendChild(photoStrip);
 
@@ -1446,7 +2020,7 @@ function registerSurfaces(app) {
 export const plugin = {
   id: PLUGIN_ID,
   name: "iNaturalist Extractor",
-  version: "1.3.0",
+  version: "1.4.0",
   engines: ["maplibre"],
 
   activate(app) {
