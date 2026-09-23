@@ -4,8 +4,8 @@
 
 **Plugin**
 
-[![Version](https://img.shields.io/badge/version-1.5.0-2ea44f?style=flat-square)](geolibre-inaturalist-extractor/plugin.json)
-[![Plugin ID](https://img.shields.io/badge/id-geolibre--inaturalist--extractor-555555?style=flat-square)](geolibre-inaturalist-extractor/plugin.json)
+[![Version](https://img.shields.io/badge/version-1.5.0-2ea44f?style=flat-square)](https://github.com/Defani/Geolibre-Inaturalist-Extraction-Plugins/blob/main/geolibre-inaturalist-extractor/plugin.json)
+[![Plugin ID](https://img.shields.io/badge/id-geolibre--inaturalist--extractor-555555?style=flat-square)](https://github.com/Defani/Geolibre-Inaturalist-Extraction-Plugins/blob/main/geolibre-inaturalist-extractor/plugin.json)
 [![Category](https://img.shields.io/badge/category-Data-0b7285?style=flat-square)](https://github.com/opengeos/geolibre-plugins)
 [![Min GeoLibre](https://img.shields.io/badge/GeoLibre-%E2%89%A5%203.0.0-0b7285?style=flat-square)](https://github.com/opengeos/GeoLibre)
 [![Engine](https://img.shields.io/badge/engine-MapLibre_only-396CB2?style=flat-square&logo=maplibre&logoColor=white)](#notes--limitations)
@@ -14,7 +14,7 @@
 **Tech stack**
 
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES_Modules-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](https://developer.mozilla.org/docs/Web/JavaScript)
-[![CSS](https://img.shields.io/badge/CSS-scoped_styles-1572B6?style=flat-square&logo=css&logoColor=white)](geolibre-inaturalist-extractor/style.css)
+[![CSS](https://img.shields.io/badge/CSS-scoped_styles-1572B6?style=flat-square&logo=css&logoColor=white)](https://github.com/Defani/Geolibre-Inaturalist-Extraction-Plugins/blob/main/geolibre-inaturalist-extractor/style.css)
 [![MapLibre GL JS](https://img.shields.io/badge/MapLibre-GL_JS-396CB2?style=flat-square&logo=maplibre&logoColor=white)](https://maplibre.org)
 [![GeoJSON](https://img.shields.io/badge/GeoJSON-layer_output-2E7D32?style=flat-square)](https://geojson.org)
 [![No bundler](https://img.shields.io/badge/build-no_bundler-lightgrey?style=flat-square)](#files)
@@ -105,7 +105,7 @@ README.md
 
 - **Quickest (any GeoLibre build):** Settings → Manage Plugins → Settings →
   *Install from file* → zip `plugin.json`, `index.js` and `style.css` from
-  `geolibre-inaturalist-extractor/` (see [docs/installation.md](docs/installation.md))
+  `geolibre-inaturalist-extractor/` (see [docs/installation.md](https://github.com/Defani/Geolibre-Inaturalist-Extraction-Plugins/blob/main/docs/installation.md))
   and pick it, or
   point GeoLibre at a manifest URL serving `plugin.json` from wherever you
   host these files.
@@ -261,7 +261,7 @@ the terms of the GNU General Public License as published by the Free Software
 Foundation; either version 2 of the License, or (at your option) any later
 version. It is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE. See the [LICENSE](LICENSE) file for the full text.
+PARTICULAR PURPOSE. See the [LICENSE](https://github.com/Defani/Geolibre-Inaturalist-Extraction-Plugins/blob/main/LICENSE) file for the full text.
 
 The QGIS plugin this one follows is GPL-2.0-or-later, so this repository uses
 the same terms. The other projects listed above (rinat, iNaturalistAPI,
