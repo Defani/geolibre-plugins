@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later
-   Copyright (c) 2026 Defani Arman (Alfitriansyah) - see README.md */
+   Copyright (c) 2026 Defani Arman (Alfitriansyah)
+   Source, README and credits:
+   https://github.com/Defani/Geolibre-Inaturalist-Extraction-Plugins */
 
 /* Scoped to .geolibre-inat-* so this doesn't leak into the rest of the app.
    Uses GeoLibre's own design tokens (hsl(var(--foreground)) etc.) so the
@@ -41,10 +43,18 @@
      Mixing into the host's real background always lands on the right side. */
   --geolibre-inat-accent: #2e7d32;
   --geolibre-inat-accent-hover: #26692a;
-  --geolibre-inat-accent-soft: color-mix(in srgb, var(--geolibre-inat-accent) 16%, hsl(var(--background)));
+  --geolibre-inat-accent-soft: color-mix(
+    in srgb,
+    var(--geolibre-inat-accent) 16%,
+    hsl(var(--background))
+  );
   --geolibre-inat-accent-fg: #ffffff;
   --geolibre-inat-warn: #b45f06;
-  --geolibre-inat-warn-soft: color-mix(in srgb, var(--geolibre-inat-warn) 16%, hsl(var(--background)));
+  --geolibre-inat-warn-soft: color-mix(
+    in srgb,
+    var(--geolibre-inat-warn) 16%,
+    hsl(var(--background))
+  );
   --geolibre-inat-warn-fg: hsl(var(--foreground));
   --geolibre-inat-g-plant: #5c9c1c;
   --geolibre-inat-g-vert: #2f80d8;
@@ -592,7 +602,12 @@
 
 .geolibre-inat-popup-link {
   margin-top: 4px;
-  color: #16a34a;
+  /* The popup is mounted on the map container, not inside the panel, so it
+     can't use the panel's --geolibre-inat-* tokens. #16a34a alone is only
+     ~3.3:1 on a white popup (below WCAG AA 4.5:1 for 12px text). Mixing it
+     into the host's resolved foreground darkens it in light mode and lightens
+     it in dark mode - same approach as the panel, no prefers-color-scheme. */
+  color: color-mix(in srgb, #16a34a 60%, hsl(var(--foreground)));
   font-weight: 600;
   text-decoration: none;
 }
