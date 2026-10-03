@@ -169,8 +169,8 @@
     {
       "id": "geolibre-layout-composer",
       "name": "Layout Composer",
-      "version": "1.2.0",
-      "description": "QGIS-style print layout designer: map frames with locked scale, DMS/DD/UTM grids, inset maps, auto legends, matplotlib-style color bars, dual-unit scale bars, LaTeX, drawing tools, Rupabumi pictograms and Maki/Temaki icons, templates, and PNG/PDF/vector PDF/GeoPDF/SVG export.",
+      "version": "1.3.0",
+      "description": "QGIS-style print layout designer: map frames with locked scale, DMS/DD/UTM grids, inset maps, auto legends, matplotlib-style color bars, dual-unit scale bars, LaTeX, drawing tools, Maki/Temaki icons, templates, and PNG/PDF/vector PDF/GeoPDF/SVG export.",
       "author": "Defani Arman Alfitriansyah",
       "homepage": "https://github.com/Defani/Geolibre-Laout-Composer",
       "manifestUrl": "plugins/geolibre-layout-composer/plugin.json",
