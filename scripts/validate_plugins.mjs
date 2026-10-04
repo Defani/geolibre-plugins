@@ -21,6 +21,7 @@ import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 
 import { loadRegistryEntries, root } from "./registry.mjs";
+import { hasSource, unpackSourceBundle } from "./source-bundles.mjs";
 
 const errors = [];
 
@@ -296,6 +297,27 @@ function changedFilesSince(ref) {
 }
 
 /**
+ * Read a JSON file as it was at a git ref.
+ *
+ * @param {string} ref Git ref.
+ * @param {string} file Repo-relative path.
+ * @returns {object | null} The parsed file, or null if it didn't exist there.
+ */
+function readJsonAtRef(ref, file) {
+  try {
+    return JSON.parse(
+      execFileSync("git", ["show", `${ref}:${file}`], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }),
+    );
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Decide whether a registry entry's bundle should be imported.
  *
  * @param {string} file The entry's `registry/<id>.json` path.
@@ -309,6 +331,74 @@ function isSelected(file, pluginDir, changedFiles) {
   }
   return changedFiles.some(
     (changed) => changed === file || changed.startsWith(`${pluginDir}/`),
+  );
+}
+
+/**
+ * Check an entry hosted from a release zip.
+ *
+ * Its files are served from R2 at `plugins/<id>/`, so that path must not also
+ * exist here. Downloading the zip is the expensive part, so like importing a
+ * committed bundle it only happens when the entry changed (or for a full run).
+ *
+ * @param {object} entry The registry entry, with a `source`.
+ * @param {string} file Its `registry/<id>.json` path.
+ * @param {string} label Prefix for error messages.
+ * @param {string} pluginDir The `plugins/<dir>` folder its manifestUrl names.
+ * @param {string[] | null} changedFiles Changed paths, or null for "all".
+ * @param {string | null} baseRef The --changed-since ref. Without one (a
+ *   full run) the version-reuse check is skipped; the deploy's write-once
+ *   marker still refuses a reused version.
+ */
+async function validateSourceEntry(
+  entry,
+  file,
+  label,
+  pluginDir,
+  changedFiles,
+  baseRef,
+) {
+  // Published versions never change, and the deploy refuses a different zip
+  // for a version it already published. Catch that here, in the pull request,
+  // by comparing with the entry on the base branch.
+  const base = baseRef ? readJsonAtRef(baseRef, file) : null;
+  if (
+    base?.source?.sha256 &&
+    base.version === entry.version &&
+    base.source.sha256 !== entry.source.sha256
+  ) {
+    addError(
+      `${label} changes source.sha256 but keeps version ${entry.version}; published versions never change, so bump the version.`,
+    );
+  }
+  if (entry.manifestUrl !== `plugins/${entry.id}/plugin.json`) {
+    addError(
+      `${label} has a source, so manifestUrl must be plugins/${entry.id}/plugin.json.`,
+    );
+  }
+  try {
+    await fs.stat(path.join(root, pluginDir));
+    addError(
+      `${label} has a source, so its code is served from the release zip; remove ${pluginDir}/ from this repository.`,
+    );
+  } catch {
+    // Expected: nothing is committed for a source entry.
+  }
+  if (!isSelected(file, pluginDir, changedFiles)) {
+    return;
+  }
+  let unpacked;
+  try {
+    unpacked = await unpackSourceBundle(entry);
+  } catch (error) {
+    addError(`${label} source: ${error.message}`);
+    return;
+  }
+  await validateLocalPlugin(
+    entry,
+    path.join(unpacked.dir, "plugin.json"),
+    `${label} (release zip)`,
+    true,
   );
 }
 
@@ -426,6 +516,21 @@ async function main() {
       );
     }
     referencedDirs.set(pluginDir, file);
+
+    if (hasSource(entry)) {
+      await validateSourceEntry(
+        entry,
+        file,
+        label,
+        pluginDir,
+        changedFiles,
+        changedSince,
+      );
+      if (isSelected(file, pluginDir, changedFiles)) {
+        imported += 1;
+      }
+      continue;
+    }
 
     if (!(await fileExists(manifestPath, `${label} manifest`))) {
       continue;
