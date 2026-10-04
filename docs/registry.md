@@ -135,6 +135,41 @@ a blocked bundle.
 GeoLibre support for the blocklist ships with a later app release; until
 then, removing a plugin from the registry only stops new installs.
 
+## Usage statistics
+
+[`https://plugins.geolibre.app/plugins/stats.json`](https://plugins.geolibre.app/plugins/stats.json)
+gives approximate usage per plugin, keyed by the `plugins/<dir>/` folder of its
+`manifestUrl`, and the catalog shows it on each plugin's card and page:
+
+```json
+{
+  "since": "2026-10-04",
+  "thisWeek": "2026-W40",
+  "lastWeek": "2026-W39",
+  "plugins": {
+    "movecost": { "usersThisWeek": 5, "usersLastWeek": 42, "launches": 310 }
+  }
+}
+```
+
+GeoLibre fetches each installed plugin's `plugin.json` when it starts, so the
+counts measure how many people use a plugin, not how many installed it. They
+come from those fetches alone; the app sends nothing extra.
+
+- **Users** are distinct visitors per ISO week. A visitor is a hash of the
+  plugin and the IP address (for IPv6, its /64 network), keyed with a secret that only the Worker holds and
+  that changes every week. Without that secret a hash can't be turned back
+  into an IP, and hashes can't be matched across weeks or across plugins.
+  They're deleted once the week ends and only the count is kept. No IP address
+  is stored.
+- **Launches** count every fetch since `since`.
+- Fetches by the registry's own deploy check, by obvious bots, and for
+  plugins that don't exist aren't counted. Offline desktop use isn't seen at
+  all, and people sharing one IP count as one user.
+
+The counts are approximate and unauthenticated: a determined script can
+inflate them, so treat them as a rough popularity signal, not exact figures.
+
 ## Schemas
 
 Both formats are defined as JSON Schemas, published alongside the registry:
