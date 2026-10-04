@@ -13,18 +13,37 @@
 //   node scripts/validate_plugins.mjs --changed-since main   # only changed
 
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import fs from "node:fs/promises";
 import path from "node:path";
+
+import Ajv2020 from "ajv/dist/2020.js";
 
 import { loadRegistryEntries, root } from "./registry.mjs";
 
 const errors = [];
 
+// Field-level rules live in schemas/, which editors can also use. This script
+// adds the checks a schema cannot express: file names, duplicates, paths on
+// disk, and what the entry bundle actually exports.
+// `verbose` exposes the failing schema, whose `$comment` holds a readable
+// version of a `pattern` or `not` rule.
+const ajv = new Ajv2020({ allErrors: true, verbose: true });
+const loadSchema = (name) =>
+  JSON.parse(readFileSync(path.join(root, "schemas", name), "utf8"));
+const validateEntrySchema = ajv.compile(
+  loadSchema("registry-entry.schema.json"),
+);
+const validateManifestSchema = ajv.compile(
+  loadSchema("plugin-manifest.schema.json"),
+);
+
 // Changes to any of these re-validate every plugin, since they can change how
 // every plugin is checked.
 const TOOLING_PATHS = [
   "scripts/",
+  "schemas/",
   "package.json",
   "package-lock.json",
   ".github/workflows/test-plugins.yml",
@@ -39,7 +58,8 @@ async function readJson(filePath, label) {
     return JSON.parse(await fs.readFile(filePath, "utf8"));
   } catch (error) {
     addError(`${label} is not valid JSON: ${error.message}`);
-    return null;
+    // Not null: a file holding the JSON literal `null` must reach the schema.
+    return undefined;
   }
 }
 
@@ -47,12 +67,50 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function requireString(object, field, label) {
-  if (typeof object[field] !== "string" || object[field].trim() === "") {
-    addError(`${label} must define a non-empty string "${field}".`);
-    return false;
+/**
+ * Run a compiled schema and report each failure against `label`.
+ *
+ * @param {import("ajv").ValidateFunction} validate Compiled schema.
+ * @param {unknown} data The JSON value to check.
+ * @param {string} label Prefix for error messages.
+ * @returns {boolean} Whether the value matched the schema.
+ */
+function checkSchema(validate, data, label) {
+  if (validate(data)) {
+    return true;
   }
-  return true;
+  // A `oneOf` with a hint already explains what is allowed, so drop the
+  // per-branch failures reported at the same path.
+  const hintedOneOfPaths = new Set(
+    validate.errors
+      .filter((e) => e.keyword === "oneOf" && e.parentSchema?.$comment)
+      .map((e) => e.instancePath),
+  );
+  for (const error of validate.errors) {
+    if (error.keyword !== "oneOf" && hintedOneOfPaths.has(error.instancePath)) {
+      continue;
+    }
+    const where = error.instancePath ? ` ${error.instancePath}` : "";
+    // `$comment` describes a `pattern`, `oneOf` or `not` rule, so only use it
+    // for those. A `not` rule keeps its hint on its own subschema; the others
+    // keep it on the schema that holds the rule.
+    const hint =
+      error.keyword === "not"
+        ? error.schema?.$comment
+        : error.keyword === "pattern" || error.keyword === "oneOf"
+          ? error.parentSchema?.$comment
+          : undefined;
+    let message = error.message;
+    if (typeof hint === "string") {
+      message = hint;
+    } else if (error.keyword === "additionalProperties") {
+      message = `has an unknown field "${error.params.additionalProperty}"`;
+    } else if (error.keyword === "enum") {
+      message = `must be one of: ${error.params.allowedValues.join(", ")}`;
+    }
+    addError(`${label}${where} ${message}`);
+  }
+  return false;
 }
 
 function resolveContainedPath(baseDir, relativePath, label) {
@@ -92,15 +150,33 @@ async function fileExists(filePath, label) {
   }
 }
 
-async function validateLocalPlugin(registryEntry, manifestPath, label) {
+/**
+ * Check a local plugin's manifest and files, and optionally import its entry.
+ *
+ * @param {object} registryEntry The plugin's registry entry.
+ * @param {string} manifestPath Absolute path to its `plugin.json`.
+ * @param {string} label Prefix for error messages.
+ * @param {boolean} importBundle Whether to import (execute) the entry bundle.
+ */
+async function validateLocalPlugin(
+  registryEntry,
+  manifestPath,
+  label,
+  importBundle,
+) {
   const manifest = await readJson(manifestPath, `${label} manifest`);
-  if (!isPlainObject(manifest)) {
-    addError(`${label} manifest must be a JSON object.`);
+  if (manifest === undefined) {
     return;
   }
-
-  for (const field of ["id", "name", "version", "entry"]) {
-    requireString(manifest, field, `${label} manifest`);
+  // Keep going after a schema failure so the checks below report their own
+  // problems in the same run; only importing needs a valid manifest.
+  const manifestValid = checkSchema(
+    validateManifestSchema,
+    manifest,
+    `${label} manifest`,
+  );
+  if (!isPlainObject(manifest)) {
+    return;
   }
 
   for (const field of ["id", "name", "version"]) {
@@ -115,6 +191,10 @@ async function validateLocalPlugin(registryEntry, manifestPath, label) {
     }
   }
 
+  // The schema has already reported a missing or non-string entry or style.
+  if (typeof manifest.entry !== "string") {
+    return;
+  }
   const pluginDir = path.dirname(manifestPath);
   const entryPath = resolveContainedPath(
     pluginDir,
@@ -125,7 +205,7 @@ async function validateLocalPlugin(registryEntry, manifestPath, label) {
     return;
   }
 
-  if (manifest.style !== undefined) {
+  if (typeof manifest.style === "string") {
     const stylePath = resolveContainedPath(
       pluginDir,
       manifest.style,
@@ -134,6 +214,10 @@ async function validateLocalPlugin(registryEntry, manifestPath, label) {
     if (stylePath) {
       await fileExists(stylePath, `${label} style`);
     }
+  }
+
+  if (!importBundle || !manifestValid) {
+    return;
   }
 
   let moduleExports;
@@ -280,13 +364,9 @@ async function main() {
 
   for (const { file, entry } of loaded.entries) {
     const label = file;
+    checkSchema(validateEntrySchema, entry, label);
     if (!isPlainObject(entry)) {
-      addError(`${label} must be a JSON object.`);
       continue;
-    }
-
-    for (const field of ["id", "name", "version", "manifestUrl"]) {
-      requireString(entry, field, label);
     }
 
     if (typeof entry.id === "string") {
@@ -297,23 +377,6 @@ async function main() {
         addError(`Duplicate plugin id in registry: ${entry.id}`);
       }
       seenIds.add(entry.id);
-    }
-
-    if (
-      typeof entry.homepage === "string" &&
-      !/^https?:\/\//.test(entry.homepage)
-    ) {
-      addError(`${label} homepage must use http(s): ${entry.homepage}`);
-    }
-
-    if (
-      entry.categories !== undefined &&
-      (!Array.isArray(entry.categories) ||
-        !entry.categories.every(
-          (category) => typeof category === "string" && category.trim() !== "",
-        ))
-    ) {
-      addError(`${label} categories must contain only non-empty strings.`);
     }
 
     if (typeof entry.manifestUrl !== "string") {
@@ -367,11 +430,11 @@ async function main() {
     if (!(await fileExists(manifestPath, `${label} manifest`))) {
       continue;
     }
-    if (!isSelected(file, pluginDir, changedFiles)) {
-      continue;
+    const importBundle = isSelected(file, pluginDir, changedFiles);
+    if (importBundle) {
+      imported += 1;
     }
-    imported += 1;
-    await validateLocalPlugin(entry, manifestPath, label);
+    await validateLocalPlugin(entry, manifestPath, label, importBundle);
   }
 
   await checkOrphanPluginDirs(referencedDirs);
