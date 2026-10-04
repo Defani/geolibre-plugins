@@ -72,7 +72,10 @@ export function hasSource(entry) {
     entry !== null &&
     typeof entry === "object" &&
     typeof entry.source?.url === "string" &&
-    typeof entry.source?.sha256 === "string"
+    // Checked here, not only by the schema: the hash names cache paths, and
+    // the preview workflow calls this on untrusted pull-request JSON.
+    typeof entry.source?.sha256 === "string" &&
+    /^[0-9a-f]{64}$/.test(entry.source.sha256)
   );
 }
 
@@ -101,6 +104,73 @@ async function readCapped(response, limit, url) {
   return new Uint8Array(Buffer.concat(chunks));
 }
 
+const MAX_REDIRECTS = 5;
+
+/**
+ * GET a URL, following redirects by hand so that every hop must be HTTPS.
+ *
+ * The URL can come from untrusted pull-request JSON (the preview workflow).
+ * Every hop, the first and each redirect, must be https:// to a host name,
+ * not localhost or a literal IP address. That rules out plain-HTTP targets
+ * such as cloud metadata endpoints and the obvious internal addresses. It is
+ * not a full SSRF guard (a public name can still resolve to a private
+ * address); the zip's SHA-256 is what guarantees its content.
+ *
+ * @param {string} url The starting URL.
+ * @returns {Promise<Response>} The final, successful response.
+ */
+async function fetchHttpsOnly(url) {
+  let current = url;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    let parsed;
+    try {
+      parsed = new URL(current);
+    } catch {
+      throw new Error(`${current} is not a valid URL`);
+    }
+    if (parsed.protocol !== "https:") {
+      throw new Error(
+        hop === 0
+          ? `${url} must use https://`
+          : `${url} redirected to a non-HTTPS URL`,
+      );
+    }
+    // A trailing dot ("localhost.") names the same host, so drop it first.
+    const host = parsed.hostname.replace(/\.$/, "");
+    if (
+      host === "localhost" ||
+      host.endsWith(".localhost") ||
+      /^\d+(\.\d+){3}$/.test(host) ||
+      host.startsWith("[")
+    ) {
+      throw new Error(
+        hop === 0
+          ? `${url} must name a host, not localhost or an IP address`
+          : `${url} redirected to localhost or an IP address`,
+      );
+    }
+    const response = await fetch(parsed, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+    });
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) {
+        throw new Error(`${url} redirected without a Location header`);
+      }
+      current = new URL(location, parsed).href;
+      // Release the redirect's own body before following it.
+      await response.body?.cancel();
+      continue;
+    }
+    if (!response.ok) {
+      throw new Error(`${url} returned HTTP ${response.status}`);
+    }
+    return response;
+  }
+  throw new Error(`${url} redirected more than ${MAX_REDIRECTS} times`);
+}
+
 /**
  * Download a release zip, or reuse a cached copy, and check its SHA-256.
  *
@@ -113,16 +183,7 @@ async function fetchVerifiedZip(source) {
   try {
     bytes = new Uint8Array(await fs.readFile(cached));
   } catch {
-    const response = await fetch(source.url, {
-      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
-    });
-    if (!response.ok) {
-      throw new Error(`${source.url} returned HTTP ${response.status}`);
-    }
-    // fetch follows redirects; don't accept one that left HTTPS.
-    if (!response.url.startsWith("https://")) {
-      throw new Error(`${source.url} redirected to a non-HTTPS URL`);
-    }
+    const response = await fetchHttpsOnly(source.url);
     bytes = await readCapped(response, MAX_ZIP_BYTES, source.url);
   }
   const actual = createHash("sha256").update(bytes).digest("hex");
