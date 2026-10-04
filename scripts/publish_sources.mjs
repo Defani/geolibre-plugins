@@ -4,11 +4,12 @@
 // `geolibre-plugins-mirror` Worker serves at plugins.geolibre.app/plugins/*.
 //
 // For each registry entry with a `source`:
-//   1. Upload the unpacked zip to `plugins/<id>/<version>/`. A version folder
+//   1. Upload the unpacked zip to `plugins/<dir>/<version>/`, where <dir> is
+//      the folder manifestUrl names (normally the id). A version folder
 //      is written once: a `.source-sha256` marker records which zip it came
 //      from, and a different zip for the same version is an error (bump the
 //      version instead).
-//   2. Then, for every plugin, point the stable `plugins/<id>/plugin.json` at
+//   2. Then, for every plugin, point the stable `plugins/<dir>/plugin.json` at
 //      that folder (its `entry` and `style` become `<version>/...`). Switching
 //      one file switches the whole plugin, so a client never mixes a new
 //      manifest with old code.
@@ -31,7 +32,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { loadRegistryEntries } from "./registry.mjs";
-import { hasSource, unpackSourceBundle } from "./source-bundles.mjs";
+import {
+  hasSource,
+  sourceFolder,
+  unpackSourceBundle,
+} from "./source-bundles.mjs";
 
 const BUCKET = "geolibre-plugins";
 const WRANGLER = "wrangler@4.147.0";
@@ -207,19 +212,23 @@ for (const entry of sources) {
   const manifest = JSON.parse(
     await fs.readFile(path.join(dir, "plugin.json"), "utf8"),
   );
-  // validate_plugins.mjs has already checked that the zip's plugin.json
-  // version equals entry.version, so the folder name matches its contents.
-  // The schema already limits id and version to these forms; checking again
-  // here keeps a bad value from ever becoming an R2 key.
+  // The R2 prefix is plugins/<folder>/<version>/, where folder is the id or
+  // a migrated plugin's original folder (sourceFolder). Validation has
+  // already checked the schema's id and version formats, that manifestUrl
+  // names this folder, and that the zip's plugin.json has this version.
+  // Checking the parts again here keeps a bad value from ever becoming an
+  // R2 key.
+  const folder = sourceFolder(entry);
   if (
-    !/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(entry.id) ||
+    !/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(folder) ||
+    entry.manifestUrl !== `plugins/${folder}/plugin.json` ||
     !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]*)?$/.test(entry.version)
   ) {
     throw new Error(
-      `${entry.id} ${entry.version}: unexpected id or version format`,
+      `${entry.id} ${entry.version}: unexpected manifestUrl or version format`,
     );
   }
-  const prefix = `plugins/${entry.id}/${entry.version}/`;
+  const prefix = `plugins/${folder}/${entry.version}/`;
   if (files.includes(MARKER)) {
     throw new Error(`${entry.id}: the release zip may not contain ${MARKER}`);
   }
@@ -239,12 +248,15 @@ for (const entry of sources) {
     // Written last, so a failed upload is retried in full next time.
     await putText(prefix + MARKER, `${entry.source.sha256}\n`);
   }
-  stable.push({ entry, text: stableManifest(manifest, entry.version, files) });
+  stable.push({
+    entry,
+    key: `plugins/${folder}/plugin.json`,
+    text: stableManifest(manifest, entry.version, files),
+  });
 }
 
 // Step 2: switch each stable manifest to its version folder.
-for (const { entry, text } of stable) {
-  const key = `plugins/${entry.id}/plugin.json`;
+for (const { entry, key, text } of stable) {
   if (!dryRun && getObject(key) === text) {
     console.log(`${key} already points at ${entry.version}`);
     continue;

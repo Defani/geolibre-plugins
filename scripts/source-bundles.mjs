@@ -12,12 +12,47 @@ import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { unzipSync } from "fflate";
+import { unzipSync, zipSync } from "fflate";
 
 // Not imported from registry.mjs, which imports this module.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const cacheDir = path.join(root, ".cache", "sources");
+
+// Per-plugin exceptions for release-zip plugins, keyed by id:
+// - `folder`: a plugin committed under another folder before it moved to a
+//   release zip keeps that folder, so existing installs keep their URL.
+//   Listing these, rather than accepting any folder, stops an entry from
+//   claiming and overwriting another plugin's folder in R2.
+// - `sourceDir`: where its readable source is kept in this repository. CI
+//   checks that folder still matches the release zip, file for file.
+const MIGRATED = new Map([
+  [
+    "geolibre-sample-plugin",
+    { folder: "sample", sourceDir: "examples/sample" },
+  ],
+]);
+
+/**
+ * The `plugins/<dir>` folder a release-zip entry must be served from.
+ *
+ * @param {{ id: string }} entry A registry entry with a `source`.
+ * @returns {string} The folder name.
+ */
+export function sourceFolder(entry) {
+  return MIGRATED.get(entry.id)?.folder ?? entry.id;
+}
+
+/**
+ * The folder in this repository that holds a release-zip plugin's readable
+ * source, if any.
+ *
+ * @param {{ id: string }} entry A registry entry with a `source`.
+ * @returns {string | null} A repo-relative folder, or null.
+ */
+export function readableSourceDir(entry) {
+  return MIGRATED.get(entry.id)?.sourceDir ?? null;
+}
 
 // Per-file cap, matching MAX_PLUGIN_ASSET_BYTES in GeoLibre.
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
@@ -266,4 +301,53 @@ export async function pruneSourceCache(entries) {
     }
   }
   return removed;
+}
+
+// Zip timestamps are stored as local date and time, so build the date from
+// local fields: it then encodes the same way in every time zone.
+const FIXED_DATE = new Date(1980, 0, 2);
+
+/**
+ * List every file under a folder, relative to it, sorted, leaving out OS
+ * metadata such as `.DS_Store`.
+ *
+ * @param {string} dir Absolute folder path.
+ * @param {string} [prefix] Path prefix for recursion.
+ * @returns {Promise<string[]>}
+ */
+export async function listFiles(dir, prefix = "") {
+  const files = [];
+  for (const dirent of await fs.readdir(path.join(dir, prefix), {
+    withFileTypes: true,
+  })) {
+    const relative = path.posix.join(prefix, dirent.name);
+    if (dirent.isDirectory()) {
+      files.push(...(await listFiles(dir, relative)));
+    } else if (dirent.isFile()) {
+      if (!isJunk(relative)) {
+        files.push(relative);
+      }
+    } else {
+      throw new Error(`${relative} is not a regular file`);
+    }
+  }
+  return files.sort();
+}
+
+/**
+ * Zip a plugin folder reproducibly: files sorted, a fixed date, and the bytes
+ * as they are, so the same folder always gives the same SHA-256.
+ *
+ * @param {string} folder Absolute path to a folder with a plugin.json.
+ * @returns {Promise<Uint8Array>} The zip bytes.
+ */
+export async function zipFolder(folder) {
+  const entries = {};
+  for (const file of await listFiles(folder)) {
+    entries[file] = [
+      new Uint8Array(await fs.readFile(path.join(folder, file))),
+      { mtime: FIXED_DATE, level: 9 },
+    ];
+  }
+  return zipSync(entries);
 }

@@ -21,7 +21,14 @@ import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 
 import { loadRegistryEntries, root } from "./registry.mjs";
-import { hasSource, unpackSourceBundle } from "./source-bundles.mjs";
+
+import {
+  hasSource,
+  listFiles,
+  readableSourceDir,
+  sourceFolder,
+  unpackSourceBundle,
+} from "./source-bundles.mjs";
 
 const errors = [];
 
@@ -335,6 +342,43 @@ function isSelected(file, pluginDir, changedFiles) {
 }
 
 /**
+ * Check that a folder of readable source still matches the release zip.
+ *
+ * @param {object} entry The registry entry, with a `source`.
+ * @param {string} label Prefix for error messages.
+ * @param {string} sourceDir Repo-relative folder holding the source.
+ */
+async function checkReadableSource(entry, label, sourceDir) {
+  let unpacked;
+  try {
+    unpacked = await unpackSourceBundle(entry);
+  } catch (error) {
+    addError(`${label} source: ${error.message}`);
+    return;
+  }
+  let local;
+  try {
+    local = await listFiles(path.join(root, sourceDir));
+  } catch (error) {
+    addError(`${label}: cannot read ${sourceDir}/: ${error.message}`);
+    return;
+  }
+  const differing = [...new Set([...local, ...unpacked.files])].filter(
+    (file) =>
+      !local.includes(file) ||
+      !unpacked.files.includes(file) ||
+      !readFileSync(path.join(root, sourceDir, file)).equals(
+        readFileSync(path.join(unpacked.dir, file)),
+      ),
+  );
+  if (differing.length > 0) {
+    addError(
+      `${label}: ${sourceDir}/ no longer matches its release zip (${differing.join(", ")}). Rebuild the zip with node scripts/make_migration_zip.mjs ${sourceDir}, publish it, and bump the version.`,
+    );
+  }
+}
+
+/**
  * Check an entry hosted from a release zip.
  *
  * Its files are served from R2 at `plugins/<id>/`, so that path must not also
@@ -371,10 +415,19 @@ async function validateSourceEntry(
       `${label} changes source.sha256 but keeps version ${entry.version}; published versions never change, so bump the version.`,
     );
   }
-  if (entry.manifestUrl !== `plugins/${entry.id}/plugin.json`) {
-    addError(
-      `${label} has a source, so manifestUrl must be plugins/${entry.id}/plugin.json.`,
-    );
+  // A release-zip plugin whose readable source is kept here (the sample in
+  // examples/sample/) must still match its release zip, file for file.
+  // Comparing contents, not a rebuilt zip's hash, doesn't depend on the zip
+  // library's compressor output.
+  const sourceDir = readableSourceDir(entry);
+  if (sourceDir) {
+    await checkReadableSource(entry, label, sourceDir);
+  }
+
+  // plugins/<id>/, or a migrated plugin's original folder (sourceFolder).
+  const expected = `plugins/${sourceFolder(entry)}/plugin.json`;
+  if (entry.manifestUrl !== expected) {
+    addError(`${label} has a source, so manifestUrl must be ${expected}.`);
   }
   try {
     await fs.stat(path.join(root, pluginDir));
