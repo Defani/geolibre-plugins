@@ -1,8 +1,8 @@
 {
   "id": "geolibre-layout-composer",
   "name": "Layout Composer",
-  "version": "1.6.0",
-  "description": "Cartographic print layout designer: map frames with locked scale and custom shapes, DMS/DD/UTM grids, inset maps, auto legends for vector, raster and tile layers, matplotlib-style color bars, dual-unit scale bars, LaTeX, drawing tools, icon catalog, templates, and PNG/PDF/vector PDF/GeoPDF/SVG export.",
+  "version": "1.8.0",
+  "description": "Cartographic print layout designer: map frames with locked scale, custom shapes and per-frame layers, DMS/DD/UTM grids, legends for vector, raster and tile layers, attribute tables and charts from layer data, matplotlib-style color bars, LaTeX, Google Fonts and Material Symbols, QGIS .qpt import/export, and PNG/PDF/vector PDF/GeoPDF/SVG export.",
   "author": "Defani Arman Alfitriansyah",
   "homepage": "https://github.com/Defani/Geolibre-Laout-Composer",
   "repository": "https://github.com/Defani/Geolibre-Laout-Composer",
@@ -10,8 +10,8 @@
   "license": "MIT",
   "manifestUrl": "plugins/geolibre-layout-composer/plugin.json",
   "source": {
-    "url": "https://github.com/Defani/Geolibre-Laout-Composer/releases/download/v1.6.0/geolibre-layout-composer-1.6.0.zip",
-    "sha256": "c39a4fb78eda8d7dfa8bd2c58ec304c996a8d8ae1b6c321630a10adb74c6cc87"
+    "url": "https://github.com/Defani/Geolibre-Laout-Composer/releases/download/v1.8.0/geolibre-layout-composer-1.8.0.zip",
+    "sha256": "2fad29447ddf5363f06b2c37ee7635b1314a3d6536350d1ea85c2d1d120873df"
   },
   "screenshots": [
     {
@@ -23,12 +23,12 @@
       "caption": "Exported map following the KLHK cartographic rules (SK MENLHK 399/2024)"
     },
     {
-      "path": "screenshots/map-frames.png",
-      "caption": "Shaped map frames, image mask, and a legend with tile and raster layers"
+      "path": "screenshots/data.png",
+      "caption": "Attribute table and charts built from a layer's features"
     },
     {
-      "path": "screenshots/colorbar.png",
-      "caption": "matplotlib-style color bar with pointed extensions and LaTeX title"
+      "path": "screenshots/map-frames.png",
+      "caption": "Shaped map frames, image mask, and a legend with tile and raster layers"
     }
   ],
   "categories": ["Visualization", "Utilities"],
