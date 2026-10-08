@@ -147,7 +147,7 @@
     {
       "id": "geolibre-inaturalist-extractor",
       "name": "iNaturalist Extractor",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "description": "Fetch georeferenced iNaturalist observations by map view or layer extent, with species, date, observer, quality-grade and advanced (taxon ID, place ID, photo license, project, annotation) filters, and a photo popup.",
       "author": "Defani Arman (Alfitriansyah)",
       "homepage": "https://github.com/Defani/Geolibre-Inaturalist-Extraction-Plugins",
@@ -169,7 +169,7 @@
     {
       "id": "geolibre-layout-composer",
       "name": "Layout Composer",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "description": "QGIS-style print layout designer: map frames with locked scale, shaped frames (circle, polygon, image mask), DMS/DD/UTM grids, inset maps, auto legends (vector, raster and tile layers), matplotlib-style color bars, dual-unit scale bars, LaTeX, drawing tools, Maki/Temaki icons, templates, and PNG/PDF/vector PDF/GeoPDF/SVG export.",
       "author": "Defani Arman Alfitriansyah",
       "homepage": "https://github.com/Defani/Geolibre-Laout-Composer",
