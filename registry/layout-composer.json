@@ -1,0 +1,36 @@
+{
+  "id": "layout-composer",
+  "name": "Layout Composer",
+  "version": "1.8.1",
+  "description": "Cartographic print layout designer: map frames with locked scale, custom shapes and per-frame layers, DMS/DD/UTM grids, legends for vector, raster and tile layers, attribute tables and charts, matplotlib-style color bars, LaTeX, Google Fonts and Material Symbols, QGIS .qpt import/export, and PNG/PDF/vector PDF/GeoPDF/SVG export.",
+  "author": "Defani Arman Alfitriansyah",
+  "homepage": "https://github.com/Defani/Layout-Composer",
+  "repository": "https://github.com/Defani/Layout-Composer",
+  "issues": "https://github.com/Defani/Layout-Composer/issues",
+  "license": "MIT",
+  "manifestUrl": "plugins/layout-composer/plugin.json",
+  "source": {
+    "url": "https://github.com/Defani/Layout-Composer/releases/download/v1.8.1/layout-composer-1.8.1.zip",
+    "sha256": "2627a53565162d727183f27bf1c9517257b2cb53afc3b8c328cc3bbc0d0015ed"
+  },
+  "screenshots": [
+    {
+      "path": "screenshots/overview.png",
+      "caption": "The Layout Composer editor with a forest-area map of Aceh"
+    },
+    {
+      "path": "screenshots/klhk-map.png",
+      "caption": "Exported forest-area map of Aceh"
+    },
+    {
+      "path": "screenshots/data.png",
+      "caption": "Attribute table and charts built from a layer's features"
+    },
+    {
+      "path": "screenshots/map-frames.png",
+      "caption": "Shaped map frames, image mask, and a legend with tile and raster layers"
+    }
+  ],
+  "categories": ["Cartography"],
+  "minGeoLibreVersion": "0.9.0"
+}

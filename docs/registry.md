@@ -89,9 +89,9 @@ like `manifestUrl`. GeoLibre ignores `repository`, `issues`, `license` and
 `screenshots`; they are for the catalog.
 
 `categories` values come from a fixed list: `Analysis`, `Archaeology`,
-`Basemaps`, `Climate`, `Data`, `Ecology`, `Example`, `Hydrology`, `Imagery`,
-`Oceans`, `Raster`, `Terrain`, `Utilities`, `Vector`, `Visualization`. Open an
-issue to propose a new category.
+`Basemaps`, `Cartography`, `Climate`, `Data`, `Ecology`, `Example`, `Hydrology`,
+`Imagery`, `Oceans`, `Raster`, `Terrain`, `Utilities`, `Vector`,
+`Visualization`. Open an issue to propose a new category.
 
 A relative `manifestUrl` resolves against the registry location, so a plugin
 hosted alongside the registry uses e.g. `plugins/my-plugin/plugin.json`. Entries whose

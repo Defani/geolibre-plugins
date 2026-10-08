@@ -43,9 +43,9 @@ from its own `registry/<id>.json` file, which holds just that entry:
   GeoLibre can check that the code it downloads is the code that was reviewed.
   It is computed at build time; don't add it yourself.
 - `categories` takes one to four values from a fixed list: `Analysis`,
-  `Archaeology`, `Basemaps`, `Climate`, `Data`, `Ecology`, `Example`,
-  `Hydrology`, `Imagery`, `Oceans`, `Raster`, `Terrain`, `Utilities`, `Vector`,
-  `Visualization`. Open an issue to propose a new one.
+  `Archaeology`, `Basemaps`, `Cartography`, `Climate`, `Data`, `Ecology`,
+  `Example`, `Hydrology`, `Imagery`, `Oceans`, `Raster`, `Terrain`,
+  `Utilities`, `Vector`, `Visualization`. Open an issue to propose a new one.
 - For the catalog page only (GeoLibre ignores them): `repository` and `issues`
   (HTTPS URLs), `license` (an SPDX identifier such as `MIT`), and up to four
   `screenshots`, each `{ "path": "screenshots/main.png", "caption": "..." }`
