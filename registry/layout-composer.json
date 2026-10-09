@@ -1,7 +1,7 @@
 {
   "id": "layout-composer",
   "name": "Layout Composer",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "Cartographic print layout designer: map frames with locked scale, custom shapes and per-frame layers, DMS/DD/UTM grids, legends for vector, raster and tile layers, attribute tables and charts, matplotlib-style color bars, LaTeX, Google Fonts and Material Symbols, QGIS .qpt import/export, and PNG/PDF/vector PDF/GeoPDF/SVG export.",
   "author": "Defani Arman Alfitriansyah",
   "homepage": "https://github.com/Defani/Layout-Composer",
@@ -10,8 +10,8 @@
   "license": "MIT",
   "manifestUrl": "plugins/layout-composer/plugin.json",
   "source": {
-    "url": "https://github.com/Defani/Layout-Composer/releases/download/v1.8.1/layout-composer-1.8.1.zip",
-    "sha256": "2627a53565162d727183f27bf1c9517257b2cb53afc3b8c328cc3bbc0d0015ed"
+    "url": "https://github.com/Defani/Layout-Composer/releases/download/v1.8.2/layout-composer-1.8.2.zip",
+    "sha256": "67a3b403aa956aeb9a58f9272463a1708bcb2e32f9482757bab575cc77f37a54"
   },
   "screenshots": [
     {
