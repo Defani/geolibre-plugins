@@ -1,0 +1,15 @@
+{
+  "id": "geolibre-mapterhorn",
+  "name": "Mapterhorn Terrain",
+  "version": "0.1.0",
+  "description": "Switch GeoLibre 3D terrain between AWS Terrarium and Mapterhorn (or a custom Terrarium/Mapbox-encoded DEM tile source).",
+  "author": "bertt",
+  "homepage": "https://github.com/bertt/geolibre-mapterhorn-plugin",
+  "manifestUrl": "plugins/geolibre-mapterhorn/plugin.json",
+  "source": {
+    "url": "https://github.com/bertt/geolibre-mapterhorn-plugin/releases/download/v0.1.0/geolibre-mapterhorn-0.1.0.zip",
+    "sha256": "397fdfbf8888b30b3cb1181b0a4da7b7e7690de9b175d5698fda83cf59ccbd10"
+  },
+  "categories": ["Terrain", "Basemaps"],
+  "minGeoLibreVersion": "0.9.0"
+}
