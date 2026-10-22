@@ -1,0 +1,18 @@
+{
+  "id": "roadstyle",
+  "name": "roadstyle",
+  "version": "0.18.1",
+  "description": "Draws roads in roadstyle's look (casings, bridges, tunnels, one-way arrows), with road-type filters, 3D buildings and base-map layers, from a duckOSM database or a style file that you open in the browser.",
+  "author": "Kaveh Khoshkhah",
+  "homepage": "https://github.com/Khoshkhah/geolibre-roadstyle",
+  "repository": "https://github.com/Khoshkhah/geolibre-roadstyle",
+  "issues": "https://github.com/Khoshkhah/geolibre-roadstyle/issues",
+  "license": "MIT",
+  "manifestUrl": "plugins/roadstyle/plugin.json",
+  "source": {
+    "url": "https://github.com/Khoshkhah/geolibre-roadstyle/releases/download/v0.18.1/roadstyle-geolibre.zip",
+    "sha256": "f4a94a1378eaff134ed14742ed6f7cae24612e94d05152bfb3642f8dfadab8d7"
+  },
+  "categories": ["Cartography", "Data", "Visualization"],
+  "minGeoLibreVersion": "3.4.0"
+}
